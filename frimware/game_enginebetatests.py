@@ -1,51 +1,71 @@
 import tkinter as tk
 from tkinter import ttk
-import ast
 
-class GameConstructor:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("Game Constructor")
-        self.master.geometry("800x600")
+class GameBuilder:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Game Builder")
+        self.root.geometry("800x600")
 
-        self.blocks_frame = tk.Frame(self.master, bg="gray")
-        self.blocks_frame.pack(side="left", fill="y")
+        # Создаем меню
+        self.menu = tk.Menu(self.root)
+        self.root.config(menu=self.menu)
 
-        self.blocks_list = tk.Listbox(self.blocks_frame, width=20, height=10)
-        self.blocks_list.pack(fill="both", expand=True)
+        self.file_menu = tk.Menu(self.menu, tearoff=0)
+        self.file_menu.add_command(label="New", command=self.new_project)
+        self.file_menu.add_command(label="Open", command=self.open_project)
+        self.file_menu.add_command(label="Save", command=self.save_project)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Exit", command=self.root.quit)
+        self.menu.add_cascade(label="File", menu=self.file_menu)
 
-        self.blocks_list.insert(tk.END, "Move Forward")
-        self.blocks_list.insert(tk.END, "Turn Left")
-        self.blocks_list.insert(tk.END, "Turn Right")
-        self.blocks_list.insert(tk.END, "Jump")
-        self.blocks_list.insert(tk.END, "If-Then")
-        self.blocks_list.insert(tk.END, "Repeat")
+        # Создаем панель инструментов
+        self.toolbar = tk.Frame(self.root, bg="gray")
+        self.toolbar.pack(fill="x")
 
-        self.code_frame = tk.Frame(self.master, bg="white")
-        self.code_frame.pack(side="right", fill="both", expand=True)
+        self.new_button = tk.Button(self.toolbar, text="New", command=self.new_project)
+        self.new_button.pack(side="left")
 
-        self.code_text = tk.Text(self.code_frame, width=40, height=20)
-        self.code_text.pack(fill="both", expand=True)
+        self.open_button = tk.Button(self.toolbar, text="Open", command=self.open_project)
+        self.open_button.pack(side="left")
 
-        self.export_button = tk.Button(self.master, text="Export to C", command=self.export_to_c)
-        self.export_button.pack(side="bottom", fill="x")
+        self.save_button = tk.Button(self.toolbar, text="Save", command=self.save_project)
+        self.save_button.pack(side="left")
 
-    def add_block(self, event):
-        selected_block = self.blocks_list.get(self.blocks_list.curselection())
-        self.code_text.insert(tk.END, f"{selected_block}\n")
+        # Создаем область для создания игры
+        self.game_area = tk.Frame(self.root, bg="white")
+        self.game_area.pack(fill="both", expand=True)
 
-    def export_to_c(self):
-        code = self.code_text.get("1.0", "end-1c")
-        ast_tree = ast.parse(code)
-        c_code = self.generate_c_code(ast_tree)
-        print(c_code)
+        # Создаем список объектов
+        self.object_list = tk.Listbox(self.game_area, width=20)
+        self.object_list.pack(side="left", fill="y")
 
-    def generate_c_code(self, ast_tree):
-        # Здесь должна быть реализована логика генерации кода на C
-        # из абстрактного синтаксического дерева (AST)
-        # для микроконтроллера
-        pass
+        # Создаем область для свойств объектов
+        self.properties_area = tk.Frame(self.game_area, bg="gray")
+        self.properties_area.pack(side="right", fill="y")
 
-root = tk.Tk()
-app = GameConstructor(root)
-root.mainloop()
+        # Создаем кнопки для добавления объектов
+        self.add_button = tk.Button(self.game_area, text="Add Object", command=self.add_object)
+        self.add_button.pack(side="bottom")
+
+    def new_project(self):
+        print("New project")
+
+    def open_project(self):
+        print("Open project")
+
+    def save_project(self):
+        print("Save project")
+
+    def add_object(self):
+        object_name = tk.simpledialog.askstring("Add Object", "Enter object name")
+        if object_name:
+            self.object_list.insert(tk.END, object_name)
+
+    def run(self):
+        self.root.mainloop()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    game_builder = GameBuilder(root)
+    game_builder.run()
