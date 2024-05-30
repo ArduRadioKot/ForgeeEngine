@@ -1,71 +1,93 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import filedialog
+import json
 
-class GameBuilder:
+class GameCreator:
     def __init__(self, root):
         self.root = root
-        self.root.title("Game Builder")
+        self.root.title("Game Creator")
         self.root.geometry("800x600")
 
-        # Создаем меню
-        self.menu = tk.Menu(self.root)
-        self.root.config(menu=self.menu)
+        self.scene = tk.Canvas(self.root, width=400, height=400)
+        self.scene.pack(side=tk.LEFT)
 
-        self.file_menu = tk.Menu(self.menu, tearoff=0)
-        self.file_menu.add_command(label="New", command=self.new_project)
-        self.file_menu.add_command(label="Open", command=self.open_project)
-        self.file_menu.add_command(label="Save", command=self.save_project)
-        self.file_menu.add_separator()
-        self.file_menu.add_command(label="Exit", command=self.root.quit)
-        self.menu.add_cascade(label="File", menu=self.file_menu)
+        self.object_list = tk.Listbox(self.root, width=40)
+        self.object_list.pack(side=tk.LEFT)
 
-        # Создаем панель инструментов
-        self.toolbar = tk.Frame(self.root, bg="gray")
-        self.toolbar.pack(fill="x")
+        self.property_frame = tk.Frame(self.root)
+        self.property_frame.pack(side=tk.LEFT)
 
-        self.new_button = tk.Button(self.toolbar, text="New", command=self.new_project)
-        self.new_button.pack(side="left")
+        self.create_menu()
 
-        self.open_button = tk.Button(self.toolbar, text="Open", command=self.open_project)
-        self.open_button.pack(side="left")
+        self.objects = []
+        self.current_object = None
 
-        self.save_button = tk.Button(self.toolbar, text="Save", command=self.save_project)
-        self.save_button.pack(side="left")
+    def create_menu(self):
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
 
-        # Создаем область для создания игры
-        self.game_area = tk.Frame(self.root, bg="white")
-        self.game_area.pack(fill="both", expand=True)
+        filemenu = tk.Menu(menubar, tearoff=0)
+        filemenu.add_command(label="New Game", command=self.new_game)
+        filemenu.add_command(label="Open Game", command=self.open_game)
+        filemenu.add_command(label="Save Game", command=self.save_game)
+        filemenu.add_command(label="Export to C", command=self.export_to_c)
+        menubar.add_cascade(label="File", menu=filemenu)
 
-        # Создаем список объектов
-        self.object_list = tk.Listbox(self.game_area, width=20)
-        self.object_list.pack(side="left", fill="y")
+        objectmenu = tk.Menu(menubar, tearoff=0)
+        objectmenu.add_command(label="Create Object", command=self.create_object)
+        objectmenu.add_command(label="Delete Object", command=self.delete_object)
+        menubar.add_cascade(label="Object", menu=objectmenu)
 
-        # Создаем область для свойств объектов
-        self.properties_area = tk.Frame(self.game_area, bg="gray")
-        self.properties_area.pack(side="right", fill="y")
+    def new_game(self):
+        self.objects = []
+        self.object_list.delete(0, tk.END)
+        self.scene.delete(tk.ALL)
 
-        # Создаем кнопки для добавления объектов
-        self.add_button = tk.Button(self.game_area, text="Add Object", command=self.add_object)
-        self.add_button.pack(side="bottom")
+    def open_game(self):
+        filename = filedialog.askopenfilename(title="Open Game", filetypes=[("Game Files", "*.game")])
+        if filename:
+            with open(filename, "r") as f:
+                self.objects = json.load(f)
+            self.object_list.delete(0, tk.END)
+            for obj in self.objects:
+                self.object_list.insert(tk.END, obj["name"])
+            self.scene.delete(tk.ALL)
+            for obj in self.objects:
+                self.scene.create_oval(obj["x"], obj["y"], obj["x"] + 20, obj["y"] + 20, fill=obj["color"])
 
-    def new_project(self):
-        print("New project")
+    def save_game(self):
+        filename = filedialog.asksaveasfilename(title="Save Game", filetypes=[("Game Files", "*.game")])
+        if filename:
+            with open(filename, "w") as f:
+                json.dump(self.objects, f)
 
-    def open_project(self):
-        print("Open project")
+    def export_to_c(self):
+        filename = filedialog.asksaveasfilename(title="Export to C", filetypes=[("C Files", "*.c")])
+        if filename:
+            with open(filename, "w") as f:
+                f.write("#include <ch32v003.h>\n")
+                f.write("void setup() {\n")
+                for obj in self.objects:
+                    f.write(f"  draw_rect({obj['x']}, {obj['y']}, {obj['x'] + 20}, {obj['y'] + 20}, {obj['color']});\n")
+                f.write("}\n")
 
-    def save_project(self):
-        print("Save project")
+    def create_object(self):
+        obj_name = tk.simpledialog.askstring("Create Object", "Enter object name")
+        if obj_name:
+            obj = {"name": obj_name, "x": 100, "y": 100, "color": "red"}
+            self.objects.append(obj)
+            self.object_list.insert(tk.END, obj_name)
+            self.scene.create_oval(obj["x"], obj["y"], obj["x"] + 20, obj["y"] + 20, fill=obj["color"])
 
-    def add_object(self):
-        object_name = tk.simpledialog.askstring("Add Object", "Enter object name")
-        if object_name:
-            self.object_list.insert(tk.END, object_name)
+    def delete_object(self):
+        selected_index = self.object_list.curselection()
+        if selected_index:
+            self.object_list.delete(selected_index)
+            del self.objects[selected_index[0]]
+            self.scene.delete(tk.ALL)
+            for obj in self.objects:
+                self.scene.create_oval(obj["x"], obj["y"], obj["x"] + 20, obj["y"] + 20, fill=obj["color"])
 
-    def run(self):
-        self.root.mainloop()
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    game_builder = GameBuilder(root)
-    game_builder.run()
+root = tk.Tk()
+game_creator = GameCreator(root)
+root.mainloop()
