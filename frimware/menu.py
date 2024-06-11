@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import game_engine as ge 
@@ -39,16 +38,14 @@ class MainMenu:
     def quit(self):
         self.root.destroy()
 
+
     def open_project(self):
         # Открыть файловый диалог для выбора проекта
         file_path = filedialog.askopenfilename(title="Выберите проект", filetypes=[("Game Engine Projects", "*.fge")])
         if file_path:
             # Открыть проект в новом окне
-            game_engine = ge.GameEngine(self.root, file_path)
-
-    #... (rest of the code remains the same)
-
-
+            game_engine_window = tk.Toplevel(self.root)
+            game_engine = GameEngine(game_engine_window, file_path)
 
     def create_project(self):
         # Создать новый проект в новом окне
@@ -78,8 +75,10 @@ class MainMenu:
         self.recent_projects_listbox.insert(tk.END, project_name)
 
         # Открыть проект в новом окне
-        game_engine = GameEngine(self.root, file_path)
+        game_engine_window = tk.Toplevel(self.root)
+        game_engine = GameEngine(game_engine_window, file_path)
 
+    # ... (rest of the code remains the same)
     def settings(self):
         # Создать окно настроек
         settings_window = tk.Toplevel(self.root)
