@@ -102,14 +102,21 @@ class GameEngine:
     def export_to_c(self):
         code = ""
         for element in self.elements:
-            block_name = element.cget("text").split(" (")[0]
-            block_info = self.blocks[block_name]
-            params = self.get_block_params(block_name)
-            code += block_info["code"] % tuple(params) + "\n"
+            if isinstance(element, tk.Text):  # Check if element is a Text widget
+                block_text = element.get("1.0", "end-1c")  # Get entire text of the block
+                code += block_text + "\n"
+            else:
+                block_name = element.cget("text").split(" (")[0]
+                if block_name in self.blocks:
+                    block_info = self.blocks[block_name]
+                    params = self.get_block_params(block_name)
+                    code += block_info["code"] % tuple(params) + "\n"
+                else:
+                    code += element.cget("text") + "\n"
         file_path = filedialog.asksaveasfilename(defaultextension=".c", filetypes=[('C files', '*.c')])
         if file_path:
             with open(file_path, "w") as f:
-               f.write(code)
+                f.write(code)
 
     def get_block_params(self, block_name):
         block_info = self.blocks[block_name]
@@ -164,7 +171,7 @@ class GameEngine:
         self.elements.append(custom_element)
         self.canvas.create_window(10, 10, window=custom_element)
 
-        file_path = filedialog.asksaveasfilename(defaultextension=".py", filetypes=[('Python files', '*.py')])
+        file_path = filedialog.asksaveasfilename(defaultextension=".с", filetypes=[('С fileы', '*.с')])
         if file_path:
              with open(file_path, "w") as f:
                   f.write(f"custom_element = tk.Label(self.master, text='{element_text}', bg='white', fg='black')\n")

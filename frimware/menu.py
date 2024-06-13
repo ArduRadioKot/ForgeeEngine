@@ -20,8 +20,6 @@ class MainMenu:
         self.create_project_button = tk.Button(self.menu_frame, text="Создать проект", command=self.create_project)
         self.create_project_button.pack(pady=10)
 
-        self.settings_button = tk.Button(self.menu_frame, text="Настройки", command=self.settings)
-        self.settings_button.pack(pady=10)
 
         self.quit_button = tk.Button(self.menu_frame, text="Выйти", command=self.quit)
         self.quit_button.pack(pady=10)
