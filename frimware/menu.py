@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import game_engine as ge 
-from game_engine import GameEngine 
+
 class MainMenu:
     def __init__(self, root):
         self.root = root
@@ -34,21 +34,16 @@ class MainMenu:
         self.recent_projects_listbox.bind("<<ListboxSelect>>", self.open_recent_project)
         self.recent_projects_list = []
 
-
     def quit(self):
         self.root.destroy()
 
-
     def open_project(self):
-        # Открыть файловый диалог для выбора проекта
         file_path = filedialog.askopenfilename(title="Выберите проект", filetypes=[("Game Engine Projects", "*.fge")])
         if file_path:
-            # Открыть проект в новом окне
             game_engine_window = tk.Toplevel(self.root)
-            game_engine = GameEngine(game_engine_window, file_path)
+            game_engine = ge.GameEngine(game_engine_window, file_path)
 
     def create_project(self):
-        # Создать новый проект в новом окне
         create_window = tk.Toplevel(self.root)
         create_window.title("Создать проект")
 
@@ -65,22 +60,17 @@ class MainMenu:
         create_button.pack(pady=10)
 
     def create_project_file(self, project_name):
-        # Создать файл для проекта
         file_path = f"{project_name}.fge"
         with open(file_path, "w") as file:
             file.write("")
 
-        # Добавить проект в список недавно созданных проектов
         self.recent_projects_list.append(file_path)
         self.recent_projects_listbox.insert(tk.END, project_name)
 
-        # Открыть проект в новом окне
         game_engine_window = tk.Toplevel(self.root)
-        game_engine = GameEngine(game_engine_window, file_path)
+        game_engine = ge.GameEngine(game_engine_window)  # Create GameEngine window without file path
 
-    # ... (rest of the code remains the same)
     def settings(self):
-        # Создать окно настроек
         settings_window = tk.Toplevel(self.root)
         settings_window.title("Настройки")
 
@@ -97,17 +87,14 @@ class MainMenu:
         save_button.pack(pady=10)
 
     def save_settings(self, setting):
-        # Сохранить настройку
         print(f"Настройка сохранена: {setting}")
 
     def open_recent_project(self, event):
-        # Открыть проект из списка недавно созданных проектов
         selected_index = self.recent_projects_listbox.curselection()[0]
         file_path = self.recent_projects_list[selected_index]
-        game_engine = ge.GameEngine(self.root, file_path)
-
-
+        game_engine_window = tk.Toplevel(self.root)
+        game_engine = ge.GameEngine(game_engine_window, file_path)
 
 root = tk.Tk()
-main_app = MainMenu(root)
+main_app = MainMenu(root) 
 root.mainloop()

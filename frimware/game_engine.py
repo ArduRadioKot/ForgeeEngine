@@ -189,7 +189,5 @@ class GameEngine:
             block_info["code"] = block_info["code"] % tuple(params)
         else:
             messagebox.showinfo("No Parameters", "This block has no parameters to edit.")
-root = tk.Tk()
-drag_and_drop_constructor = GameEngine(root)
-root.mainloop()
+
 
