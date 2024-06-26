@@ -1,4 +1,6 @@
 import tkinter as tk
+from tkinter import filedialog
+from PIL import Image, ImageTk
 
 class PaintEngine:
     def __init__(self):
@@ -34,6 +36,11 @@ class PaintEngine:
 
         self.save_button = tk.Button(self.root, text="Save bitmap", command=self.save_bitmap_h)
         self.save_button.pack()
+
+        self.open_button = tk.Button(self.root, text="Open image", command=self.open_image)
+        self.open_button.pack()
+
+        self.image = None
 
     def paint_pixel(self, x, y, color, brush_size):
         for i in range(-brush_size, brush_size+1):
@@ -79,6 +86,16 @@ class PaintEngine:
 
     def update_eraser_size(self, event):
         self.eraser_size = self.eraser_slider.get()
+
+    def open_image(self):
+        file_path = filedialog.askopenfilename(filetypes=[("Image files", ".png .jpg .bmp")])
+        if file_path:
+            image = Image.open(file_path)
+            image = image.resize((128, 64))
+            self.image = ImageTk.PhotoImage(image)
+            self.canvas.delete("all")  # Очистить канву перед отображением нового изображения
+            self.canvas.create_image(0, 0, image=self.image, anchor="nw")
+            self.canvas.image = self.image  # Сохранить ссылку на изображение
 
     def run(self):
         self.root.mainloop()
