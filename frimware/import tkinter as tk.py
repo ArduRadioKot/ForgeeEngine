@@ -171,44 +171,21 @@ class GameEngine:
         self.elements.append(custom_element)
         self.canvas.create_window(10, 10, window=custom_element)
 
-        # Create a text widget to store the custom element's code
-        custom_element.code_text = tk.Text(self.master, width=40, height=10)
-        custom_element.code_text.insert("1.0", element_text)
-        custom_element.code_text.pack()
-
-    def edit_custom_element(self, element):
-        # Create a new window to edit the custom element's code
-        edit_window = tk.Toplevel(self.master)
-        edit_window.title("Edit Custom Element")
-
-        # Create a text widget to edit the code
-        code_editor = tk.Text(edit_window, width=40, height=10)
-        code_editor.insert("1.0", element.code_text.get("1.0", "end-1c"))
-        code_editor.pack(fill="both", expand=True)
-
-        # Create a button to save the changes
-        save_button = tk.Button(edit_window, text="Save", command=lambda: self.save_custom_element_changes(element, code_editor))
-        save_button.pack()
-
-    def save_custom_element_changes(self, element, code_editor):
-        # Get the updated code from the text widget
-        updated_code = code_editor.get("1.0", "end-1c")
-
-        # Update the custom element's code text widget
-        element.code_text.delete("1.0", "end")
-        element.code_text.insert("1.0", updated_code)
-
-        # Update the custom element's label text
-        element.config(text=updated_code)
-
-        # Close the edit window
-        code_editor.master.destroy()
+        file_path = filedialog.asksaveasfilename(defaultextension=".с", filetypes=[('С fileы', '*.с')])
+        if file_path:
+             with open(file_path, "w") as f:
+                  f.write(f"custom_element = tk.Label(self.master, text='{element_text}', bg='white', fg='black')\n")
+                  f.write("custom_element.draggable = True\n")
+                  f.write("custom_element.bind('<ButtonPress-1>', self.start_drag)\n")
+                  f.write("custom_element.bind('<ButtonRelease-1>', self.stop_drag)\n")
+                  f.write("custom_element.bind('<B1-Motion>', self.drag)\n")
+                  f.write("self.elements.append(custom_element)\n")
+                  f.write("self.canvas.create_window(10, 10, window=custom_element)\n")
 
     def show_context_menu(self, event: tk.Event):
         context_menu = tk.Menu(self.master, tearoff=0)
         context_menu.add_command(label="Delete", command=lambda: self.delete_element(event.widget))
         context_menu.add_command(label="Edit Parameters", command=lambda: self.edit_parameters(event.widget))
-        context_menu.add_command(label="Edit Code", command=lambda: self.edit_custom_element(event.widget))
         context_menu.post(event.x_root, event.y_root)
 
     def edit_parameters(self, element):
