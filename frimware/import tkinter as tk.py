@@ -158,11 +158,12 @@ class GameEngine:
         text_editor = ScrolledText(custom_element_window, width=40, height=10)
         text_editor.pack(fill="both", expand=True)
 
-        create_button = tk.Button(custom_element_window, text="Create", command=lambda: self.add_custom_element(text_editor.get("1.0", "1.0 lineend")))
+        create_button = tk.Button(custom_element_window, text="Create", command=lambda: self.add_custom_element(text_editor.get("1.0", "end-1c")))
         create_button.pack()
 
     def add_custom_element(self, element_text: str):
-        custom_element = tk.Label(self.master, text=element_text, bg="white", fg="black")
+        custom_element = tk.Text(self.master, width=20, height=5)
+        custom_element.insert("1.0", element_text)
         custom_element.draggable = True
         custom_element.bind("<ButtonPress-1>", self.start_drag)
         custom_element.bind("<ButtonRelease-1>", self.stop_drag)
@@ -170,17 +171,6 @@ class GameEngine:
         custom_element.bind("<Button-3>", self.show_context_menu)
         self.elements.append(custom_element)
         self.canvas.create_window(10, 10, window=custom_element)
-
-        file_path = filedialog.asksaveasfilename(defaultextension=".с", filetypes=[('С fileы', '*.с')])
-        if file_path:
-             with open(file_path, "w") as f:
-                  f.write(f"custom_element = tk.Label(self.master, text='{element_text}', bg='white', fg='black')\n")
-                  f.write("custom_element.draggable = True\n")
-                  f.write("custom_element.bind('<ButtonPress-1>', self.start_drag)\n")
-                  f.write("custom_element.bind('<ButtonRelease-1>', self.stop_drag)\n")
-                  f.write("custom_element.bind('<B1-Motion>', self.drag)\n")
-                  f.write("self.elements.append(custom_element)\n")
-                  f.write("self.canvas.create_window(10, 10, window=custom_element)\n")
 
     def show_context_menu(self, event: tk.Event):
         context_menu = tk.Menu(self.master, tearoff=0)
@@ -199,5 +189,5 @@ class GameEngine:
 
 
 root = tk.Tk()
-main_app = GameEngine(root) 
+file_manager = GameEngine(root)
 root.mainloop()
