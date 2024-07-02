@@ -3,8 +3,8 @@ from tkinter import filedialog, simpledialog, messagebox
 from tkinter.scrolledtext import ScrolledText
 
 class GameEngine:
-    def __init__(self, master: tk.Tk):
-        
+    def __init__(self, root, master: tk.Tk):
+        self.root = root
         self.master = master
         self.master.title("blockcoding")
         self.master.geometry("1367x768")
@@ -40,18 +40,22 @@ class GameEngine:
         }
         
         self.create_buttons()
+        self.toolbar = tk.Frame(self.root, bg="gray")
+        self.toolbar.pack(fill="x")
+        self.export_button = tk.Button(self.toolbar, text="Save", command=self.save_logical_elements)
+        self.export_button.pack(side="left", padx=5, pady=5)
 
-        self.export_button = tk.Button(self.button_frame, text="Save", command=self.save_logical_elements)
-        self.export_button.pack(fill="x")
+        self.export_button = tk.Button(self.toolbar, text="Open", command=self.open_logical_elements)
+        self.export_button.pack(side="left", padx=5, pady=5)
 
-        self.export_button = tk.Button(self.button_frame, text="Open", command=self.open_logical_elements)
-        self.export_button.pack(fill="x")
+        self.export_button = tk.Button(self.toolbar, text="Custom element", command=self.create_custom_element)
+        self.export_button.pack(side="left", padx=5, pady=5)
 
-        self.export_button = tk.Button(self.button_frame, text="Custom element", command=self.create_custom_element)
-        self.export_button.pack(fill="x")
+        self.import_button = tk.Button(self.toolbar, text="Import from C", command=self.import_blocks_from_c_file)
+        self.import_button.pack(side="left", padx=5, pady=5)
 
-        self.export_button = tk.Button(self.button_frame, text="Export to C", command=self.export_to_c)
-        self.export_button.pack(fill="x")
+        self.export_button = tk.Button(self.toolbar, text="Export to C", command=self.export_to_c)
+        self.export_button.pack(side="left", padx=5, pady=5)
 
     def create_buttons(self):
         for block_name, block_info in self.blocks.items():
@@ -187,4 +191,43 @@ class GameEngine:
         else:
             messagebox.showinfo("No Parameters", "This block has no parameters to edit.")
 
+    def import_blocks_from_c_file(self):
+        file_path = filedialog.askopenfilename(filetypes=[("C files", "*.c")])
+        if file_path:
+            with open(file_path, "r") as f:
+                c_code = f.read()
+            self.parse_c_code(c_code)
 
+    def parse_c_code(self, c_code: str):
+    # Very basic parsing, you may want to improve this
+        blocks = []
+        for line in c_code.splitlines():
+            if line.startswith("void ") and "(" in line and ")" in line:
+                block_name = line.split("(")[0].strip().replace("void ", "")
+                block_code = line
+                blocks.append({"name": block_name, "code": block_code, "params": self.extract_params(block_code)})
+        for block in blocks:
+            self.add_custom_block(block)
+
+    def extract_params(self, block_code: str):
+    # Very basic parameter extraction, you may want to improve this
+        params = []
+        start_idx = block_code.find("(")
+        end_idx = block_code.find(")")
+        if start_idx != -1 and end_idx != -1:
+            param_str = block_code[start_idx + 1:end_idx]
+            params = [param.strip() for param in param_str.split(",")]
+        return params
+
+    def add_custom_block(self, block_info: dict):
+        block_name = block_info["name"]
+        block_code = block_info["code"]
+        block_params = block_info["params"]
+        self.blocks[block_name] = {"code": block_code, "params": block_params, "index": len(self.blocks) + 1}
+        button = tk.Button(self.button_frame, text=block_name, command=lambda block_name=block_name: self.create_block(block_name))
+        button.pack(fill="x")
+        self.create_block(block_name)  # Create the block immediately
+
+root = tk.Tk()
+main_app = GameEngine(root=root) 
+root.mainloop()

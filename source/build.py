@@ -279,9 +279,6 @@ class GameEngine:
         else:
             messagebox.showinfo("No Parameters", "This block has no parameters to edit.")
 
-
-
-
 root = tk.Tk()
 main_app = MainMenu(root) 
 root.mainloop()
