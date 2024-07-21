@@ -57,11 +57,8 @@ class MainMenu:
         create_button.pack(pady=10)
 
     def create_project_file(self, project_name):
-        file_path = f"{project_name}.fge"
-        with open(file_path, "w") as file:
-            file.write("")
 
-        self.recent_projects_list.append(file_path)
+     
         self.recent_projects_listbox.insert(tk.END, project_name)
 
         game_engine_window = tk.Toplevel(self.root)
