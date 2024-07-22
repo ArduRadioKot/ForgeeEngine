@@ -30,7 +30,7 @@ GitHub repository: The engine's source code is hosted on GitHub, allowing develo
 Licensing
 
 * Open-source: The engine is open-source, allowing developers to use, modify, and distribute the engine freely.
-Permissive license: The engine is licensed under a permissive license, allowing developers to use the engine in commercial and non-commercial projects.
+Permissive 
 
 * Download the engine: Download the latest version of the engine from the GitHub repository.
 
