@@ -1,15 +1,14 @@
-import tkinter as tk
+import customtkinter as ctk
 from tkinter import filedialog
 from PIL import Image, ImageTk
-
 class PaintEngine:
     def __init__(self):
-        self.root = tk.Tk()
+        self.root = ctk.CTk()
         self.root.title("Черно-белый экран")
         self.root.geometry("800x640")
 
-        self.canvas = tk.Canvas(self.root, width=512, height=256, bg="white")
-        self.canvas.pack()
+        self.canvas = ctk.CTkCanvas(self.root, width=512, height=256, background="white")        
+        self.canvas.pack(pady=20, padx=10)
 
         self.pixel_size = 4  # размер пикселя в пикселях
         for i in range(64):  # 16 строк
@@ -23,24 +22,32 @@ class PaintEngine:
         self.brush_size = 1
         self.eraser_size = 1
 
-        self.brush_slider = tk.Scale(self.root, from_=1, to=10, orient=tk.HORIZONTAL, label="Brush size")
-        self.brush_slider.pack()
-        self.eraser_slider = tk.Scale(self.root, from_=1, to=10, orient=tk.HORIZONTAL, label="Eraser size")
-        self.eraser_slider.pack()
+        self.brush_slider = ctk.CTkSlider(self.root, from_=1, to=10, width=200, command=self.update_brush_size)
+        self.brush_slider.pack(pady=10)
+        self.brush_label = ctk.CTkLabel(self.root, text="Brush size: 1")
+        self.brush_label.pack()
 
-        self.brush_slider.bind("<B1-Motion>", self.update_brush_size)
-        self.eraser_slider.bind("<B1-Motion>", self.update_eraser_size)
+        self.eraser_slider = ctk.CTkSlider(self.root, from_=1, to=10, width=200, command=self.update_eraser_size)
+        self.eraser_slider.pack(pady=10)
+        self.eraser_label = ctk.CTkLabel(self.root, text="Eraser size: 1")
+        self.eraser_label.pack()
 
         self.canvas.bind("<B1-Motion>", self.draw)
         self.canvas.bind("<B3-Motion>", self.erase)
 
-        self.save_button = tk.Button(self.root, text="Save bitmap", command=self.save_bitmap_h)
-        self.save_button.pack()
+        self.save_button = ctk.CTkButton(self.root, text="Save bitmap", command=self.save_bitmap_h)
+        self.save_button.pack(pady=20)
 
-        self.open_button = tk.Button(self.root, text="Open image", command=self.open_image)
+        self.open_button = ctk.CTkButton(self.root, text="Open image", command=self.open_image)
         self.open_button.pack()
 
+        self.save_button = ctk.CTkButton(self.root, text="Quit", command=self.quit)
+        self.save_button.pack(pady=20)
+
         self.image = None
+    
+    def quit(self):
+        self.root.destroy()
 
     def paint_pixel(self, x, y, color, brush_size):
         for i in range(-brush_size, brush_size+1):
@@ -81,11 +88,13 @@ class PaintEngine:
                 f.write(", ".join(bitmap[i:i+16]) + ",\n")
             f.write("};\n")
 
-    def update_brush_size(self, event):
-        self.brush_size = self.brush_slider.get()
+    def update_brush_size(self, value):
+        self.brush_size = int(value)
+        self.brush_label.configure(text=f"Brush size: {self.brush_size}")
 
-    def update_eraser_size(self, event):
-        self.eraser_size = self.eraser_slider.get()
+    def update_eraser_size(self, value):
+        self.eraser_size = int(value)
+        self.eraser_label.configure(text=f"Eraser size: {self.eraser_size}")
 
     def open_image(self):
         file_path = filedialog.askopenfilename(filetypes=[("Image files", ".png .jpg .bmp")])
@@ -101,5 +110,7 @@ class PaintEngine:
         self.root.mainloop()
 
 if __name__ == "__main__":
+    ctk.set_appearance_mode("System")  # Внешний вид окна (светлый/темный)
+    ctk.set_default_color_theme("green")  # Цветовая тема окна
     paint_engine = PaintEngine()
     paint_engine.run()
