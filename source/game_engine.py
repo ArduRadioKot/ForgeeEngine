@@ -103,8 +103,6 @@ class GameEngine:
         self.canvas.create_window(10, 10, window=block, tags=f"block_{block_name}")
         block.canvas_id = self.canvas.find_withtag(f"block_{block_name}")[0]
 
-
-
     def start_drag(self, event: tk.Event):
         element = event.widget
         element.x0 = event.x
