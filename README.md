@@ -25,14 +25,7 @@ Input handling: The engine provides a simple and intuitive input handling system
 
 <h2>Community</h2>
 
- * Forum: A community forum for discussing the engine, sharing knowledge, and getting support.
-GitHub repository: The engine's source code is hosted on GitHub, allowing developers to contribute and collaborate on the project.
-Licensing
-
-* Open-source: The engine is open-source, allowing developers to use, modify, and distribute the engine freely.
-Permissive license: The engine is licensed under a permissive license, allowing developers to use the engine in commercial and non-commercial projects.
-
-* Download the engine: Download the latest version of the engine from the GitHub repository.
+ * Forum: A community forum in discord 
 
 * Read the documentation: Read the engine's documentation to learn more about its features and functionality.
 
