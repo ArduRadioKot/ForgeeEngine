@@ -11,12 +11,41 @@ class GameEngine:
         self.master.title("blockcoding")
         self.master.geometry("1367x768")
 
+        self.toolbar = ctk.CTkFrame(self.master, width=50, height=768)
+        self.toolbar.pack(side="left", fill="y")
+
+        self.label = ctk.CTkLabel(self.toolbar, text="ForgeeEngine", font=("Arial", 15))
+        self.label.pack(pady=10)
+
+        self.paint_button = ctk.CTkButton(self.toolbar, text="Paint")
+        self.paint_button.pack(fill="x", pady=10)
+
+        self.ide_button = ctk.CTkButton(self.toolbar, text="IDE")
+        self.ide_button.pack(fill="x", pady=10)
+
+        self.settings_button = ctk.CTkButton(self.toolbar, text="Settings")
+        self.settings_button.pack(fill="x", pady=10)
+
+        self.settings_button = ctk.CTkButton(self.toolbar, text="Quit")
+        self.settings_button.pack(fill="x", pady=10)
+
+        self.appearance_mode_label = ctk.CTkLabel(self.toolbar, text="Appearance Mode:")
+        self.appearance_mode_label.pack(fill="x", pady=140)
+        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.toolbar, values=["Dark", "Light", "System"],
+                                                                       command=self.change_appearance_mode_event)
+        self.appearance_mode_optionemenu.pack(fill="x", pady=10)
+        self.scaling_label = ctk.CTkLabel(self.toolbar, text="UI Scaling:")
+        self.scaling_label.pack(fill="x", pady=10)
+        self.scaling_optionemenu = ctk.CTkOptionMenu(self.toolbar, values=["80%", "90%", "100%", "110%", "120%"],
+                                                               command=self.change_scaling_event)
+        self.scaling_optionemenu.pack(fill="x", pady=10)
         self.canvas = ctk.CTkCanvas(self.master, width=1200, height=1000000)
         self.canvas.pack(side="left")
         self.scroll_region = (0, 0, 1000, 1000)
         self.canvas.config(scrollregion=self.scroll_region)
         
         self.elements = []
+
 
         self.trash_zone = ctk.CTkFrame(self.master, bg_color="red", width=100, height=200)
         self.trash_zone.pack(side="right", fill="both", expand=True)
@@ -194,6 +223,13 @@ class GameEngine:
             block_info["code"] = block_info["code"] % tuple(params)
         else:
             messagebox.showinfo("No Parameters", "This block has no parameters to edit.")
+
+    def change_appearance_mode_event(self, new_appearance_mode: str):
+        ctk.set_appearance_mode(new_appearance_mode)
+
+    def change_scaling_event(self, new_scaling: str):
+        new_scaling_float = int(new_scaling.replace("%", "")) / 100
+        ctk.set_widget_scaling(new_scaling_float)
 
 if __name__ == "__main__":
     app = ctk.CTk()
