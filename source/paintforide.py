@@ -2,8 +2,9 @@ import customtkinter as ctk
 from tkinter import filedialog
 from PIL import Image, ImageTk
 class PaintEngine:
-    def __init__(self):
+    def __init__(self, master):
         self.root = ctk.CTk()
+        self.master = master
         self.root.title("Черно-белый экран")
         self.root.geometry("800x640")
 

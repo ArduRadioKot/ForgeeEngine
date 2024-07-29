@@ -2,12 +2,14 @@ import customtkinter as ctk
 from tkinter import simpledialog, filedialog, messagebox
 from customtkinter import CTk, CTkLabel, CTkButton,  CTkToplevel
 import tkinter as tk
+import paintforide as p
 ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("green") 
 class GameEngine:
     def __init__(self, master: ctk.CTk):
         
         self.master = master
+        self.root = master
         self.master.title("blockcoding")
         self.master.geometry("1367x768")
 
@@ -17,7 +19,7 @@ class GameEngine:
         self.label = ctk.CTkLabel(self.toolbar, text="ForgeeEngine", font=("Arial", 15))
         self.label.pack(pady=10)
 
-        self.paint_button = ctk.CTkButton(self.toolbar, text="Paint")
+        self.paint_button = ctk.CTkButton(self.toolbar, text="Paint", command=self.paint)
         self.paint_button.pack(fill="x", pady=10)
 
         self.ide_button = ctk.CTkButton(self.toolbar, text="IDE")
@@ -228,6 +230,11 @@ class GameEngine:
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         ctk.set_widget_scaling(new_scaling_float)
+    def paint(self):
+        paint_window = ctk.CTkToplevel(self.root)
+        paint_engine = p.PaintEngine(paint_window)  # Pass the master parameter
+        paint_engine.run()  # Call the run method to start the event loop
+
 
 if __name__ == "__main__":
     app = ctk.CTk()
