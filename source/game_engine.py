@@ -76,21 +76,21 @@ class GameEngine:
         self.create_buttons()
 
         self.export_button = ctk.CTkButton(self.button_frame, text="Save", command=self.save_logical_elements)
-        self.export_button.pack(fill="x")
+        self.export_button.pack(fill="x", pady =10)
 
         self.export_button = ctk.CTkButton(self.button_frame, text="Open", command=self.open_logical_elements)
-        self.export_button.pack(fill="x")
+        self.export_button.pack(fill="x",pady =10)
 
         self.export_button = ctk.CTkButton(self.button_frame, text="Custom element", command=self.create_custom_element)
-        self.export_button.pack(fill="x")
+        self.export_button.pack(fill="x", pady =10)
 
         self.export_button = ctk.CTkButton(self.button_frame, text="Export to C", command=self.export_to_c)
-        self.export_button.pack(fill="x")
+        self.export_button.pack(fill="x", pady =10)
 
     def create_buttons(self):
         for block_name, block_info in self.blocks.items():
             button = ctk.CTkButton(self.button_frame, text=block_name, command=lambda block_name=block_name: self.create_block(block_name))
-            button.pack(fill="x")
+            button.pack(fill="x", pady =10 )
 
     def create_block(self, block_name):
         block_info = self.blocks[block_name]

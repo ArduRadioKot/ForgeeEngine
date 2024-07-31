@@ -164,21 +164,21 @@ class GameEngine:
         self.create_buttons()
 
         self.export_button = ctk.CTkButton(self.button_frame, text="Save", command=self.save_logical_elements)
-        self.export_button.pack(fill="x")
+        self.export_button.pack(fill="x", pady =10)
 
         self.export_button = ctk.CTkButton(self.button_frame, text="Open", command=self.open_logical_elements)
-        self.export_button.pack(fill="x")
+        self.export_button.pack(fill="x",pady =10)
 
         self.export_button = ctk.CTkButton(self.button_frame, text="Custom element", command=self.create_custom_element)
-        self.export_button.pack(fill="x")
+        self.export_button.pack(fill="x", pady =10)
 
         self.export_button = ctk.CTkButton(self.button_frame, text="Export to C", command=self.export_to_c)
-        self.export_button.pack(fill="x")
+        self.export_button.pack(fill="x", pady =10)
 
     def create_buttons(self):
         for block_name, block_info in self.blocks.items():
             button = ctk.CTkButton(self.button_frame, text=block_name, command=lambda block_name=block_name: self.create_block(block_name))
-            button.pack(fill="x")
+            button.pack(fill="x", pady =10 )
 
     def create_block(self, block_name):
         block_info = self.blocks[block_name]
@@ -321,7 +321,7 @@ class GameEngine:
     def paint(self):
         paint_window = ctk.CTkToplevel(self.root)
         paint_engine = PaintEngine(paint_window)  # Pass the master parameter
-        paint_engine.run()  # Call the run method to start the event loop
+        paint_engine.run()  # Call the run method to start the event loop # Call the run method to start the event loop
 
 class PaintEngine:
     def __init__(self, master):
