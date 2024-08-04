@@ -72,6 +72,7 @@ class GameEngine:
             'end': {'code': '}', 'params': [], 'index': 9},
             'delay': {'code': 'sleep(1000);', 'params': [], 'index': 10},
         }
+        self.custom_elements = {}
         
         self.create_buttons()
 
@@ -107,24 +108,45 @@ class GameEngine:
 
     def start_drag(self, event: tk.Event):
         element = event.widget
-        element.x0 = event.x
-        element.y0 = event.y
-
+        if isinstance(element, ctk.CTkTextbox):  # Проверяем, является ли элемент кастомным
+            element.x0 = event.x
+            element.y0 = event.y
+            element.canvas_id = self.canvas.find_withtag("custom_element")[0]
+        else:
+            element.x0 = event.x
+            element.y0 = event.y
+            element.canvas_id = self.canvas.find_withtag(f"block_{element.cget('text').split(' (')[0]}")[0]
     def stop_drag(self, event: tk.Event):
         element = event.widget
         if self.is_in_trash_zone(element):
-            self.delete_element(element)
-
+            if element in self.custom_elements:
+                self.canvas.delete(self.custom_elements[element])
+                element.destroy()
+                self.elements.remove(element)
+                del self.custom_elements[element]
+            else:
+                self.delete_element(element)
+    
     def drag(self, event: tk.Event):
         element = event.widget
         dx = event.x - element.x0
         dy = event.y - element.y0
-        self.canvas.move(element.canvas_id, dx, dy)
-        element.x0 = event.x
-        element.y0 = event.y
+        if element in self.custom_elements:
+            self.canvas.move(self.custom_elements[element], dx, dy)
+            element.x0 = event.x
+            element.y0 = event.y
+            self.canvas.tag_raise(self.custom_elements[element])
+        else:
+            self.canvas.move(element.canvas_id, dx, dy)
+            element.x0 = event.x
+            element.y0 = event.y
+            self.canvas.tag_raise(element.canvas_id)
 
     def is_in_trash_zone(self, element: ctk.CTkLabel):
-        x, y = element.winfo_x(), element.winfo_y()
+        if element in self.custom_elements:
+            x, y = self.canvas.coords(self.custom_elements[element])[0], self.canvas.coords(self.custom_elements[element])[1]
+        else:
+            x, y = self.canvas.coords(element.canvas_id)[0], self.canvas.coords(element.canvas_id)[1]
         return (x > self.trash_zone.winfo_x() and
                 x < self.trash_zone.winfo_x() + self.trash_zone.winfo_width() and
                 y > self.trash_zone.winfo_y() and
@@ -207,7 +229,9 @@ class GameEngine:
         custom_element.bind("<Button-3>", self.show_context_menu)
         self.elements.append(custom_element)
         canvas_id = self.canvas.create_window(10, 10, window=custom_element, tags="custom_element")
-        custom_element.canvas_id = canvas_id
+        self.custom_elements[custom_element] = canvas_id
+        custom_element.x0 = 0
+        custom_element.y0 = 0
 
     def show_context_menu(self, event: tk.Event):
         context_menu = ctk.CTkMenu(self.master, tearoff=0)
@@ -230,6 +254,7 @@ class GameEngine:
     def change_scaling_event(self, new_scaling: str):
         new_scaling_float = int(new_scaling.replace("%", "")) / 100
         ctk.set_widget_scaling(new_scaling_float)
+
     def paint(self):
         paint_window = ctk.CTkToplevel(self.root)
         paint_engine = p.PaintEngine(paint_window)  # Pass the master parameter
