@@ -3,6 +3,7 @@ from tkinter import simpledialog, filedialog, messagebox
 from customtkinter import CTk, CTkLabel, CTkButton,  CTkToplevel
 import tkinter as tk
 import paintforide as p
+import TextIde as tide
 ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("green") 
 class GameEngine:
@@ -22,7 +23,7 @@ class GameEngine:
         self.paint_button = ctk.CTkButton(self.toolbar, text="Paint", command=self.paint)
         self.paint_button.pack(fill="x", pady=10)
 
-        self.ide_button = ctk.CTkButton(self.toolbar, text="IDE")
+        self.ide_button = ctk.CTkButton(self.toolbar, text="IDE", command=self.ide)
         self.ide_button.pack(fill="x", pady=10)
 
         self.settings_button = ctk.CTkButton(self.toolbar, text="Settings")
@@ -260,6 +261,9 @@ class GameEngine:
         paint_engine = p.PaintEngine(paint_window)  # Pass the master parameter
         paint_engine.run()  # Call the run method to start the event loop
 
+    def ide(self):
+        ide_window = tide.textIde(self.root)  # Pass the self.root instance as the master parameter
+        ide_window.run()  # Call the run method to start the event loop # Call the run method to start the event loop
 
 if __name__ == "__main__":
     app = ctk.CTk()
