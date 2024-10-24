@@ -2,6 +2,10 @@
 
 Block Game Engine for CH32V003 Portable Game Console
 
+# Repo map:
+   <img src = "4096286b-5669-44db-9399-1ddc74ed3eb7.jpeg">
+
+
 # Overview
 
 The Block Game Engine is a lightweight, open-source game engine designed specifically for the CH32V003 portable game console. The engine is built around a block-based architecture, allowing developers to create engaging and interactive games with ease.
