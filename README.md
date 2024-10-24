@@ -3,7 +3,7 @@
 Block Game Engine for CH32V003 Portable Game Console
 
 # Repo map:
-   <img src = "4096286b-5669-44db-9399-1ddc74ed3eb7.jpeg">
+   <img src = "4096286b-5669-44db-9399-1ddc74ed3eb7.jpeg.png">
 
 
 # Overview
