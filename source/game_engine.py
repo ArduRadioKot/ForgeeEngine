@@ -35,7 +35,7 @@ class GameEngine:
         self.appearance_mode_label = ctk.CTkLabel(self.toolbar, text="Appearance Mode:")
         self.appearance_mode_label.pack(fill="x", pady=140)
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.toolbar, values=["Dark", "Light", "System"],
-                                                                       command=self.change_appearance_mode_event)
+                                                                      command=self.change_appearance_mode_event)
         self.appearance_mode_optionemenu.pack(fill="x", pady=10)
         self.scaling_label = ctk.CTkLabel(self.toolbar, text="UI Scaling:")
         self.scaling_label.pack(fill="x", pady=10)
