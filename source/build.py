@@ -4,7 +4,8 @@ from customtkinter import CTk, CTkLabel, CTkButton,  CTkToplevel
 import tkinter as tk
 from PIL import Image, ImageTk
 
-
+ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
+ctk.set_default_color_theme("green") 
 class MainMenu:
     def __init__(self, root):
         self.root = root

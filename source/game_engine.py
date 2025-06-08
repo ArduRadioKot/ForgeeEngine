@@ -1,269 +1,906 @@
 import customtkinter as ctk
 from tkinter import simpledialog, filedialog, messagebox
-from customtkinter import CTk, CTkLabel, CTkButton,  CTkToplevel
+from customtkinter import CTk, CTkLabel, CTkButton,  CTkToplevel, CTkSwitch, CTkComboBox
 import tkinter as tk
 import paintforide as p
 import TextIde as tide
+import json
+
 ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
-ctk.set_default_color_theme("green") 
+ctk.set_default_color_theme("blue") 
+
+class Block(ctk.CTkFrame):
+    def __init__(self, master, block_type, block_info, **kwargs):
+        super().__init__(master, **kwargs)
+        self.block_type = block_type
+        self.block_info = block_info
+        self.connected_blocks = []
+        self.canvas = master  # Store reference to canvas
+        
+        # Configure block appearance
+        self.configure(
+            fg_color=block_info.get('color', '#4a4a4a'),
+            corner_radius=10,
+            border_width=2,
+            border_color=block_info.get('border_color', '#666666')
+        )
+        
+        # Create block content
+        self.content_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.content_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Add block label
+        self.label = ctk.CTkLabel(
+            self.content_frame,
+            text=block_type,
+            text_color="white",
+            font=("Arial", 12, "bold")
+        )
+        self.label.pack(side="left", padx=5)
+        
+        # Add parameters if any
+        if block_info.get('params'):
+            self.param_frame = ctk.CTkFrame(self.content_frame, fg_color="transparent")
+            self.param_frame.pack(side="left", fill="x", expand=True)
+            
+            for param in block_info['params']:
+                param_container = ctk.CTkFrame(self.param_frame, fg_color="#666666", corner_radius=5)
+                param_container.pack(side="left", padx=2)
+                
+                param_entry = ctk.CTkEntry(
+                    param_container,
+                    width=50,
+                    height=20,
+                    fg_color="#444444",
+                    border_color="#888888",
+                    text_color="white"
+                )
+                param_entry.pack(padx=2, pady=2)
+                setattr(self, f"param_{param}", param_entry)
+        
+        # Add connection points
+        self.top_connector = ctk.CTkFrame(self, width=30, height=10, fg_color="#888888", corner_radius=5)
+        self.top_connector.pack(fill="x", padx=10, pady=(2, 0))
+        
+        self.bottom_connector = ctk.CTkFrame(self, width=30, height=10, fg_color="#888888", corner_radius=5)
+        self.bottom_connector.pack(fill="x", padx=10, pady=(0, 2))
+        
+        # Make the block draggable
+        self.bind("<ButtonPress-1>", self.start_drag)
+        self.bind("<ButtonRelease-1>", self.stop_drag)
+        self.bind("<B1-Motion>", self.drag)
+        
+        # Make all child widgets draggable
+        for child in self.winfo_children():
+            child.bind("<ButtonPress-1>", self.start_drag)
+            child.bind("<ButtonRelease-1>", self.stop_drag)
+            child.bind("<B1-Motion>", self.drag)
+    
+    def start_drag(self, event):
+        self._drag_start_x = event.x
+        self._drag_start_y = event.y
+        self.lift()  # Bring block to front
+        self.configure(border_color="#00ff00")  # Highlight when dragging
+    
+    def stop_drag(self, event):
+        self._drag_start_x = None
+        self._drag_start_y = None
+        self.configure(border_color=self.block_info.get('border_color', '#666666'))
+    
+    def drag(self, event):
+        if hasattr(self, '_drag_start_x') and self._drag_start_x is not None:
+            dx = event.x - self._drag_start_x
+            dy = event.y - self._drag_start_y
+            x = self.winfo_x() + dx
+            y = self.winfo_y() + dy
+            self.place(x=x, y=y)
+            
+            # Notify the game engine about the drag
+            if hasattr(self.canvas, 'game_engine'):
+                self.canvas.game_engine.check_snapping(self)
+
+class SettingsWindow(CTkToplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Settings")
+        self.geometry("400x500")
+        self.resizable(False, False)
+        
+        # Make window modal
+        self.transient(parent)
+        self.grab_set()
+        
+        # Create main frame
+        self.main_frame = ctk.CTkFrame(self)
+        self.main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Appearance settings
+        self.create_appearance_settings()
+        
+        # Grid settings
+        self.create_grid_settings()
+        
+        # Block settings
+        self.create_block_settings()
+        
+        # Save button
+        self.save_button = ctk.CTkButton(
+            self.main_frame,
+            text="Save Settings",
+            command=self.save_settings
+        )
+        self.save_button.pack(fill="x", padx=10, pady=10)
+    
+    def create_appearance_settings(self):
+        # Appearance section
+        appearance_frame = ctk.CTkFrame(self.main_frame)
+        appearance_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(
+            appearance_frame,
+            text="Appearance",
+            font=("Arial", 14, "bold")
+        ).pack(anchor="w", padx=10, pady=5)
+        
+        # Theme selection
+        theme_frame = ctk.CTkFrame(appearance_frame)
+        theme_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(theme_frame, text="Theme:").pack(side="left", padx=5)
+        self.theme_combo = CTkComboBox(
+            theme_frame,
+            values=["System", "Dark", "Light"],
+            command=self.change_theme
+        )
+        self.theme_combo.pack(side="left", padx=5)
+        self.theme_combo.set(ctk.get_appearance_mode())
+    
+    def create_grid_settings(self):
+        # Grid section
+        grid_frame = ctk.CTkFrame(self.main_frame)
+        grid_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(
+            grid_frame,
+            text="Grid Settings",
+            font=("Arial", 14, "bold")
+        ).pack(anchor="w", padx=10, pady=5)
+        
+        # Grid visibility
+        self.grid_visible = ctk.CTkSwitch(
+            grid_frame,
+            text="Show Grid",
+            command=self.toggle_grid
+        )
+        self.grid_visible.pack(anchor="w", padx=10, pady=5)
+        self.grid_visible.select()  # Grid is visible by default
+        
+        # Grid size
+        grid_size_frame = ctk.CTkFrame(grid_frame)
+        grid_size_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(grid_size_frame, text="Grid Size:").pack(side="left", padx=5)
+        self.grid_size_combo = CTkComboBox(
+            grid_size_frame,
+            values=["10", "20", "30", "40", "50"],
+            command=self.change_grid_size
+        )
+        self.grid_size_combo.pack(side="left", padx=5)
+        self.grid_size_combo.set("20")  # Default grid size
+    
+    def create_block_settings(self):
+        # Block settings section
+        block_frame = ctk.CTkFrame(self.main_frame)
+        block_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(
+            block_frame,
+            text="Block Settings",
+            font=("Arial", 14, "bold")
+        ).pack(anchor="w", padx=10, pady=5)
+        
+        # Snap distance
+        snap_frame = ctk.CTkFrame(block_frame)
+        snap_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(snap_frame, text="Snap Distance:").pack(side="left", padx=5)
+        self.snap_distance_combo = CTkComboBox(
+            snap_frame,
+            values=["20", "30", "40", "50"],
+            command=self.change_snap_distance
+        )
+        self.snap_distance_combo.pack(side="left", padx=5)
+        self.snap_distance_combo.set("30")  # Default snap distance
+    
+    def change_theme(self, theme):
+        ctk.set_appearance_mode(theme)
+    
+    def toggle_grid(self):
+        if hasattr(self.master, 'game_engine'):
+            if self.grid_visible.get():
+                self.master.game_engine.draw_grid()
+            else:
+                self.master.game_engine.canvas.delete("grid")
+    
+    def change_grid_size(self, size):
+        if hasattr(self.master, 'game_engine'):
+            self.master.game_engine.canvas.delete("grid")
+            self.master.game_engine.draw_grid(int(size))
+    
+    def change_snap_distance(self, distance):
+        if hasattr(self.master, 'game_engine'):
+            self.master.game_engine.SNAP_DISTANCE = int(distance)
+    
+    def save_settings(self):
+        # Save settings to a file
+        settings = {
+            'theme': self.theme_combo.get(),
+            'grid_visible': self.grid_visible.get(),
+            'grid_size': self.grid_size_combo.get(),
+            'snap_distance': self.snap_distance_combo.get()
+        }
+        
+        try:
+            with open('settings.json', 'w') as f:
+                json.dump(settings, f)
+            messagebox.showinfo("Success", "Settings saved successfully!")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save settings: {str(e)}")
+
 class GameEngine:
     def __init__(self, master: ctk.CTk):
-        
         self.master = master
         self.root = master
-        self.master.title("blockcoding")
+        self.master.title("FrogeeEngine")
         self.master.geometry("1367x768")
-
-        self.toolbar = ctk.CTkFrame(self.master, width=50, height=768)
-        self.toolbar.pack(side="left", fill="y")
-
-        self.label = ctk.CTkLabel(self.toolbar, text="ForgeeEngine", font=("Arial", 15))
-        self.label.pack(pady=10)
-
-        self.paint_button = ctk.CTkButton(self.toolbar, text="Paint", command=self.paint)
-        self.paint_button.pack(fill="x", pady=10)
-
-        self.ide_button = ctk.CTkButton(self.toolbar, text="IDE", command=self.ide)
-        self.ide_button.pack(fill="x", pady=10)
-
-        self.settings_button = ctk.CTkButton(self.toolbar, text="Settings")
-        self.settings_button.pack(fill="x", pady=10)
-
-        self.settings_button = ctk.CTkButton(self.toolbar, text="Quit")
-        self.settings_button.pack(fill="x", pady=10)
-
-        self.appearance_mode_label = ctk.CTkLabel(self.toolbar, text="Appearance Mode:")
-        self.appearance_mode_label.pack(fill="x", pady=140)
-        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.toolbar, values=["Dark", "Light", "System"],
-                                                                      command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.pack(fill="x", pady=10)
-        self.scaling_label = ctk.CTkLabel(self.toolbar, text="UI Scaling:")
-        self.scaling_label.pack(fill="x", pady=10)
-        self.scaling_optionemenu = ctk.CTkOptionMenu(self.toolbar, values=["80%", "90%", "100%", "110%", "120%"],
-                                                               command=self.change_scaling_event)
-        self.scaling_optionemenu.pack(fill="x", pady=10)
-        self.canvas = ctk.CTkCanvas(self.master, width=1200, height=1000000)
-        self.canvas.pack(side="left")
-        self.scroll_region = (0, 0, 1000, 1000)
-        self.canvas.config(scrollregion=self.scroll_region)
         
+        # Initialize elements list
         self.elements = []
-
-
-        self.trash_zone = ctk.CTkFrame(self.master, bg_color="red", width=100, height=200)
-        self.trash_zone.pack(side="right", fill="both", expand=True)
+        self.selected_block = None
         
-        self.button_frame = ctk.CTkFrame(self.master)
-        self.button_frame.pack()
-
-        self.v_scroll = ctk.CTkScrollbar(self.master, orientation="vertical", command=self.canvas.yview)
-        self.v_scroll.pack(side="right", fill="y")
-        self.canvas.config(yscrollcommand=self.v_scroll.set)
+        # Initialize settings
+        self.SNAP_DISTANCE = 30  # Default snap distance
         
+        # Load settings if available
+        self.load_settings()
         
-        self.blocks = {
-            'ledON': {'code': 'digitalWrite(LED_PIN, HIGH);', 'params': [], 'index': 1},
-            'ledOFF': {'code': 'digitalWrite(LED_PIN, LOW);', 'params': [], 'index': 2},
-            'loop': {'code': 'void endless_loop()', 'params': [], 'index': 3},
-            'if': {'code': 'if (%s) {\n    %s\n}', 'params': ['condition', 'body'], 'index': 4},
-            'buttonON': {'code': 'if (digitalRead(buttonPin) == HIGH)', 'params': [], 'index': 5},
-            'buttonOFF': {'code': 'if (digitalRead(buttonPin) == LOW)', 'params': [], 'index': 6},
-            'else': {'code': 'else', 'params': [], 'index': 7},
-            'do': {'code': '{', 'params': [], 'index': 8},
-            'end': {'code': '}', 'params': [], 'index': 9},
-            'delay': {'code': 'sleep(1000);', 'params': [], 'index': 10},
+        # Initialize block categories with Scratch-like blocks
+        self.block_categories = {
+            'Motion': {
+                'move': {'code': 'move(%s) steps', 'params': ['steps'], 'color': '#4C97FF', 'border_color': '#3373CC'},
+                'turn': {'code': 'turn(%s) degrees', 'params': ['degrees'], 'color': '#4C97FF', 'border_color': '#3373CC'},
+                'go_to': {'code': 'go to x:%s y:%s', 'params': ['x', 'y'], 'color': '#4C97FF', 'border_color': '#3373CC'},
+                'point': {'code': 'point in direction %s', 'params': ['direction'], 'color': '#4C97FF', 'border_color': '#3373CC'}
+            },
+            'Control': {
+                'wait': {'code': 'wait %s seconds', 'params': ['seconds'], 'color': '#FFAB19', 'border_color': '#CF8B17'},
+                'repeat': {'code': 'repeat %s times {\n    %s\n}', 'params': ['times', 'body'], 'color': '#FFAB19', 'border_color': '#CF8B17'},
+                'forever': {'code': 'forever {\n    %s\n}', 'params': ['body'], 'color': '#FFAB19', 'border_color': '#CF8B17'},
+                'if': {'code': 'if %s {\n    %s\n}', 'params': ['condition', 'body'], 'color': '#FFAB19', 'border_color': '#CF8B17'}
+            },
+            'Looks': {
+                'say': {'code': 'say %s', 'params': ['text'], 'color': '#9966FF', 'border_color': '#774DCB'},
+                'think': {'code': 'think %s', 'params': ['text'], 'color': '#9966FF', 'border_color': '#774DCB'},
+                'change_size': {'code': 'change size by %s', 'params': ['size'], 'color': '#9966FF', 'border_color': '#774DCB'},
+                'set_size': {'code': 'set size to %s%', 'params': ['size'], 'color': '#9966FF', 'border_color': '#774DCB'}
+            },
+            'Sound': {
+                'play_sound': {'code': 'play sound %s', 'params': ['sound'], 'color': '#CF63CF', 'border_color': '#A63FA6'},
+                'play_note': {'code': 'play note %s for %s beats', 'params': ['note', 'beats'], 'color': '#CF63CF', 'border_color': '#A63FA6'},
+                'change_volume': {'code': 'change volume by %s', 'params': ['volume'], 'color': '#CF63CF', 'border_color': '#A63FA6'},
+                'set_volume': {'code': 'set volume to %s%', 'params': ['volume'], 'color': '#CF63CF', 'border_color': '#A63FA6'}
+            },
+            'Operators': {
+                'add': {'code': '%s + %s', 'params': ['a', 'b'], 'color': '#40BF4A', 'border_color': '#2E8A35'},
+                'subtract': {'code': '%s - %s', 'params': ['a', 'b'], 'color': '#40BF4A', 'border_color': '#2E8A35'},
+                'multiply': {'code': '%s * %s', 'params': ['a', 'b'], 'color': '#40BF4A', 'border_color': '#2E8A35'},
+                'divide': {'code': '%s / %s', 'params': ['a', 'b'], 'color': '#40BF4A', 'border_color': '#2E8A35'}
+            }
         }
-        self.custom_elements = {}
         
-        self.create_buttons()
+        # Create layout
+        self.create_layout()
+        
+        # Create block categories
+        self.create_block_categories()
 
-        self.export_button = ctk.CTkButton(self.button_frame, text="Save", command=self.save_logical_elements)
-        self.export_button.pack(fill="x", pady =10)
-
-        self.export_button = ctk.CTkButton(self.button_frame, text="Open", command=self.open_logical_elements)
-        self.export_button.pack(fill="x",pady =10)
-
-        self.export_button = ctk.CTkButton(self.button_frame, text="Custom element", command=self.create_custom_element)
-        self.export_button.pack(fill="x", pady =10)
-
-        self.export_button = ctk.CTkButton(self.button_frame, text="Export to C", command=self.export_to_c)
-        self.export_button.pack(fill="x", pady =10)
+    def create_layout(self):
+        # Create main frame
+        self.main_frame = ctk.CTkFrame(self.master)
+        self.main_frame.pack(fill="both", expand=True)
+        
+        # Create toolbar
+        self.toolbar = ctk.CTkFrame(self.main_frame, width=200)
+        self.toolbar.pack(side="left", fill="y", padx=5, pady=5)
+        
+        # Create category tabs
+        self.category_tabs = ctk.CTkTabview(self.toolbar)
+        self.category_tabs.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Create canvas frame
+        self.canvas_frame = ctk.CTkFrame(self.main_frame)
+        self.canvas_frame.pack(side="left", fill="both", expand=True, padx=5, pady=5)
+        
+        # Create main canvas with grid
+        self.canvas = tk.Canvas(self.canvas_frame, bg='#2b2b2b')
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.canvas.game_engine = self  # Store reference to game engine
+        
+        # Set canvas scroll region
+        self.canvas.configure(scrollregion=(0, 0, 2000, 2000))
+        
+        # Draw grid
+        self.draw_grid()
+        
+        # Add toolbar buttons
+        self.add_toolbar_buttons()
+    
+    def draw_grid(self, grid_size=20):
+        # Remove existing grid
+        self.canvas.delete("grid")
+        
+        # Draw vertical lines
+        for x in range(0, 2000, grid_size):
+            self.canvas.create_line(x, 0, x, 2000, fill='#333333', dash=(1, 2), tags="grid")
+        
+        # Draw horizontal lines
+        for y in range(0, 2000, grid_size):
+            self.canvas.create_line(0, y, 2000, y, fill='#333333', dash=(1, 2), tags="grid")
+    
+    def add_toolbar_buttons(self):
+        # Add settings button
+        self.settings_button = ctk.CTkButton(
+            self.toolbar,
+            text="Settings",
+            command=self.open_settings
+        )
+        self.settings_button.pack(fill="x", padx=5, pady=5)
+        
+        # Add export button
+        self.export_button = ctk.CTkButton(
+            self.toolbar,
+            text="Export to C",
+            command=self.export_to_c
+        )
+        self.export_button.pack(fill="x", padx=5, pady=5)
+        
+        # Add clear button
+        self.clear_button = ctk.CTkButton(
+            self.toolbar,
+            text="Clear All",
+            command=self.clear_workspace
+        )
+        self.clear_button.pack(fill="x", padx=5, pady=5)
+        
+        # Add save/load buttons
+        self.save_button = ctk.CTkButton(
+            self.toolbar,
+            text="Save Project",
+            command=self.save_project
+        )
+        self.save_button.pack(fill="x", padx=5, pady=5)
+        
+        self.load_button = ctk.CTkButton(
+            self.toolbar,
+            text="Load Project",
+            command=self.load_project
+        )
+        self.load_button.pack(fill="x", padx=5, pady=5)
+        
+        # Add run button
+        self.run_button = ctk.CTkButton(
+            self.toolbar,
+            text="Run",
+            command=self.run_project,
+            fg_color="#4CAF50",
+            hover_color="#45a049"
+        )
+        self.run_button.pack(fill="x", padx=5, pady=5)
+    
+    def clear_workspace(self):
+        for block in self.elements:
+            self.canvas.delete(block.canvas_id)
+            block.destroy()
+        self.elements.clear()
+    
+    def save_project(self):
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".fge",
+            filetypes=[("Forgee Engine Project", "*.fge")]
+        )
+        if file_path:
+            project_data = {
+                'blocks': [],
+                'connections': []
+            }
+            
+            # Save blocks with their coordinates and parameters
+            for i, block in enumerate(self.elements):
+                block_data = {
+                    'id': i,
+                    'type': block.block_type,
+                    'x': block.winfo_x(),
+                    'y': block.winfo_y(),
+                    'params': {}
+                }
+                
+                # Save parameter values
+                if block.block_info.get('params'):
+                    for param in block.block_info['params']:
+                        param_value = getattr(block, f"param_{param}").get()
+                        block_data['params'][param] = param_value
+                
+                project_data['blocks'].append(block_data)
+            
+            # Save connections between blocks
+            for i, block in enumerate(self.elements):
+                for connected_block in block.connected_blocks:
+                    # Only save each connection once
+                    if self.elements.index(connected_block) > i:
+                        connection = {
+                            'from': i,
+                            'to': self.elements.index(connected_block)
+                        }
+                        project_data['connections'].append(connection)
+            
+            with open(file_path, 'w') as f:
+                json.dump(project_data, f, indent=2)
+            messagebox.showinfo("Success", "Project saved successfully!")
+    
+    def load_project(self):
+        file_path = filedialog.askopenfilename(
+            filetypes=[("Forgee Engine Project", "*.fge")]
+        )
+        if file_path:
+            with open(file_path, 'r') as f:
+                project_data = json.load(f)
+            
+            self.clear_workspace()
+            
+            # First create all blocks
+            for block_data in project_data['blocks']:
+                block_type = block_data['type']
+                for category in self.block_categories.values():
+                    if block_type in category:
+                        block_info = category[block_type]
+                        block = Block(self.canvas, block_type, block_info, width=150)
+                        
+                        # Set block position
+                        block.place(x=block_data['x'], y=block_data['y'])
+                        
+                        # Set parameter values
+                        if block_data.get('params'):
+                            for param, value in block_data['params'].items():
+                                param_entry = getattr(block, f"param_{param}")
+                                param_entry.insert(0, value)
+                        
+                        # Make the block draggable
+                        block.bind("<ButtonPress-1>", block.start_drag)
+                        block.bind("<ButtonRelease-1>", block.stop_drag)
+                        block.bind("<B1-Motion>", block.drag)
+                        
+                        self.elements.append(block)
+            
+            # Then restore connections
+            for connection in project_data.get('connections', []):
+                from_block = self.elements[connection['from']]
+                to_block = self.elements[connection['to']]
+                
+                # Add connection to both blocks
+                from_block.connected_blocks.append(to_block)
+                to_block.connected_blocks.append(from_block)
+                
+                # Draw connection line
+                self.draw_connection_line(from_block, to_block)
+            
+            messagebox.showinfo("Success", "Project loaded successfully!")
 
     def create_buttons(self):
         for block_name, block_info in self.blocks.items():
             button = ctk.CTkButton(self.button_frame, text=block_name, command=lambda block_name=block_name: self.create_block(block_name))
             button.pack(fill="x", pady =10 )
 
-    def create_block(self, block_name):
-        block_info = self.blocks[block_name]
-        block = ctk.CTkLabel(self.master, text=f"{block_name} ({block_info['index']})", bg_color="white", text_color="black")
-        block.draggable = True
-        block.params = block_info['params']
+    def create_block(self, block_name, block_info):
+        # Create the block directly on the canvas
+        block = Block(self.canvas, block_name, block_info, width=150)
+        
+        # Calculate position to add the block
+        x = self.canvas.canvasx(0) + 50
+        y = self.canvas.canvasy(0) + 50
+        
+        # Add the block to the canvas
+        canvas_id = self.canvas.create_window(x, y, window=block, tags=f"block_{block_name}")
+        block.canvas_id = canvas_id
+        
+        # Make the block draggable
         block.bind("<ButtonPress-1>", self.start_drag)
         block.bind("<ButtonRelease-1>", self.stop_drag)
         block.bind("<B1-Motion>", self.drag)
-        block.bind("<Button-3>", self.show_context_menu)
+        
+        # Store the block
         self.elements.append(block)
-        self.canvas.create_window(10, 10, window=block, tags=f"block_{block_name}")
-        block.canvas_id = self.canvas.find_withtag(f"block_{block_name}")[0]
+        
+        return block
 
-    def start_drag(self, event: tk.Event):
-        element = event.widget
-        if isinstance(element, ctk.CTkTextbox):  # Проверяем, является ли элемент кастомным
-            element.x0 = event.x
-            element.y0 = event.y
-            element.canvas_id = self.canvas.find_withtag("custom_element")[0]
-        else:
-            element.x0 = event.x
-            element.y0 = event.y
-            element.canvas_id = self.canvas.find_withtag(f"block_{element.cget('text').split(' (')[0]}")[0]
-    def stop_drag(self, event: tk.Event):
-        element = event.widget
-        if self.is_in_trash_zone(element):
-            if element in self.custom_elements:
-                self.canvas.delete(self.custom_elements[element])
-                element.destroy()
-                self.elements.remove(element)
-                del self.custom_elements[element]
-            else:
-                self.delete_element(element)
+    def create_block_categories(self):
+        # Create tabs for each category
+        for category in self.block_categories.keys():
+            tab = self.category_tabs.add(category)
+            
+            # Create a frame for the blocks in this category
+            block_frame = ctk.CTkFrame(tab)
+            block_frame.pack(fill="both", expand=True, padx=5, pady=5)
+            
+            # Add blocks to the category
+            for block_name, block_info in self.block_categories[category].items():
+                button = ctk.CTkButton(
+                    block_frame,
+                    text=block_name,
+                    fg_color=block_info.get('color', '#4a4a4a'),
+                    command=lambda bn=block_name, bi=block_info: self.create_block(bn, bi)
+                )
+                button.pack(fill="x", padx=5, pady=2)
     
-    def drag(self, event: tk.Event):
-        element = event.widget
-        dx = event.x - element.x0
-        dy = event.y - element.y0
-        if element in self.custom_elements:
-            self.canvas.move(self.custom_elements[element], dx, dy)
-            element.x0 = event.x
-            element.y0 = event.y
-            self.canvas.tag_raise(self.custom_elements[element])
-        else:
-            self.canvas.move(element.canvas_id, dx, dy)
-            element.x0 = event.x
-            element.y0 = event.y
-            self.canvas.tag_raise(element.canvas_id)
-
-    def is_in_trash_zone(self, element: ctk.CTkLabel):
-        if element in self.custom_elements:
-            x, y = self.canvas.coords(self.custom_elements[element])[0], self.canvas.coords(self.custom_elements[element])[1]
-        else:
-            x, y = self.canvas.coords(element.canvas_id)[0], self.canvas.coords(element.canvas_id)[1]
-        return (x > self.trash_zone.winfo_x() and
-                x < self.trash_zone.winfo_x() + self.trash_zone.winfo_width() and
-                y > self.trash_zone.winfo_y() and
-                y < self.trash_zone.winfo_y() + self.trash_zone.winfo_height())
-
-    def delete_element(self, element: ctk.CTkLabel):
-        element.destroy()
-        self.elements.remove(element)
-
     def export_to_c(self):
-        code = ""
-        for element in self.elements:
-            if isinstance(element, ctk.CTkText):  # Check if element is a Text widget
-                block_text = element.get("1.0", "end-1c")  # Get entire text of the block
-                code += block_text + "\n"
-            else:
-                block_name = element.cget("text").split(" (")[0]
-                if block_name in self.blocks:
-                    block_info = self.blocks[block_name]
-                    params = self.get_block_params(block_name)
-                    code += block_info["code"] % tuple(params) + "\n"
-                else:
-                    code += element.cget("text") + "\n"
-        file_path = filedialog.asksaveasfilename(defaultextension=".c", filetypes=[('C files', '*.c')])
+        # Validate blocks before export
+        errors = self.validate_blocks()
+        if errors:
+            error_message = "Cannot export code due to the following errors:\n\n" + "\n".join(errors)
+            messagebox.showerror("Export Error", error_message)
+            return
+        
+        # Generate C code
+        code = []
+        visited = set()
+        
+        def traverse_block(block, indent=0):
+            if block in visited:
+                return
+            visited.add(block)
+            
+            # Get block parameters
+            params = []
+            if block.block_info.get('params'):
+                for param in block.block_info['params']:
+                    param_value = getattr(block, f"param_{param}").get()
+                    # Convert string parameters to proper C format
+                    if param in ['text', 'sound']:
+                        param_value = f'"{param_value}"'
+                    params.append(param_value)
+            
+            # Convert block code to C
+            block_code = self.convert_to_c(block.block_type, block.block_info['code'], params)
+            
+            # Add proper indentation
+            indented_code = "    " * indent + block_code
+            
+            # Split code into lines and add to output
+            for line in indented_code.split('\n'):
+                code.append(line)
+            
+            # Traverse connected blocks with increased indentation
+            for connected_block in block.connected_blocks:
+                traverse_block(connected_block, indent + 1)
+        
+        # Start from blocks that aren't connected to any other blocks
+        for block in self.elements:
+            if not any(block in other.connected_blocks for other in self.elements):
+                traverse_block(block)
+        
+        # Create the complete C program
+        c_program = [
+            "#include <stdio.h>",
+            "#include <stdlib.h>",
+            "#include <unistd.h>",
+            "#include <math.h>",
+            "",
+            "// Global variables",
+            "int current_x = 0;",
+            "int current_y = 0;",
+            "int current_direction = 0;",
+            "int current_size = 100;",
+            "int current_volume = 100;",
+            "",
+            "// Function declarations",
+            "void move(int steps);",
+            "void turn(int degrees);",
+            "void go_to(int x, int y);",
+            "void point_direction(int direction);",
+            "void say(const char* text);",
+            "void think(const char* text);",
+            "void change_size(int size);",
+            "void set_size(int size);",
+            "void play_sound(const char* sound);",
+            "void play_note(int note, int beats);",
+            "void change_volume(int volume);",
+            "void set_volume(int volume);",
+            "void wait(int seconds);",
+            "",
+            "int main() {",
+            "    printf(\"Starting program...\\n\");",
+        ]
+        
+        # Add the generated code with proper indentation
+        for line in code:
+            c_program.append("    " + line)
+        
+        c_program.extend([
+            "    printf(\"\\nProgram finished.\\n\");",
+            "    return 0;",
+            "}",
+            "",
+            "// Function implementations",
+            "void move(int steps) {",
+            "    double radians = current_direction * M_PI / 180.0;",
+            "    current_x += steps * cos(radians);",
+            "    current_y += steps * sin(radians);",
+            "    printf(\"Moving %d steps to position (%d, %d)\\n\", steps, current_x, current_y);",
+            "}",
+            "",
+            "void turn(int degrees) {",
+            "    current_direction = (current_direction + degrees) % 360;",
+            "    printf(\"Turning %d degrees to direction %d\\n\", degrees, current_direction);",
+            "}",
+            "",
+            "void go_to(int x, int y) {",
+            "    current_x = x;",
+            "    current_y = y;",
+            "    printf(\"Going to position (%d, %d)\\n\", x, y);",
+            "}",
+            "",
+            "void point_direction(int direction) {",
+            "    current_direction = direction % 360;",
+            "    printf(\"Pointing in direction %d\\n\", direction);",
+            "}",
+            "",
+            "void say(const char* text) {",
+            "    printf(\"Saying: %s\\n\", text);",
+            "}",
+            "",
+            "void think(const char* text) {",
+            "    printf(\"Thinking: %s\\n\", text);",
+            "}",
+            "",
+            "void change_size(int size) {",
+            "    current_size += size;",
+            "    printf(\"Changing size by %d to %d%%\\n\", size, current_size);",
+            "}",
+            "",
+            "void set_size(int size) {",
+            "    current_size = size;",
+            "    printf(\"Setting size to %d%%\\n\", size);",
+            "}",
+            "",
+            "void play_sound(const char* sound) {",
+            "    printf(\"Playing sound: %s\\n\", sound);",
+            "}",
+            "",
+            "void play_note(int note, int beats) {",
+            "    printf(\"Playing note %d for %d beats\\n\", note, beats);",
+            "}",
+            "",
+            "void change_volume(int volume) {",
+            "    current_volume += volume;",
+            "    if (current_volume > 100) current_volume = 100;",
+            "    if (current_volume < 0) current_volume = 0;",
+            "    printf(\"Changing volume by %d to %d%%\\n\", volume, current_volume);",
+            "}",
+            "",
+            "void set_volume(int volume) {",
+            "    current_volume = volume;",
+            "    if (current_volume > 100) current_volume = 100;",
+            "    if (current_volume < 0) current_volume = 0;",
+            "    printf(\"Setting volume to %d%%\\n\", current_volume);",
+            "}",
+            "",
+            "void wait(int seconds) {",
+            "    printf(\"Waiting %d seconds...\\n\", seconds);",
+            "    sleep(seconds);",
+            "}"
+        ])
+        
+        # Save to file
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".c",
+            filetypes=[('C Source File', '*.c')]
+        )
         if file_path:
             with open(file_path, "w") as f:
-                f.write(code)
+                f.write("\n".join(c_program))
+            messagebox.showinfo("Success", "C code exported successfully!")
 
-    def get_block_params(self, block_name):
-        block_info = self.blocks[block_name]
-        if block_info['params']:
-            return [simpledialog.askstring("Parameter", f"Enter value for {param}") for param in block_info["params"]]
-        return []
-
-    def save_logical_elements(self):
-        file_path = filedialog.asksaveasfilename(defaultextension=".fcb", filetypes=[('ForgeeCodeIDE_block', '*.fcb')])
-        if file_path:
-            with open(file_path, "w") as f:
-                for element in self.elements:
-                    x, y = element.winfo_rootx(), element.winfo_rooty()
-                    f.write(f"{element.cget('text')} {x} {y}\n")
-            print("Logical scheme saved to logical_scheme.lgs")
-
-    def open_logical_elements(self):
-        file_path = filedialog.askopenfilename(filetypes=[("ForgeeCodeIDE_block", "*.fcb")])
-        if file_path:
-            self.elements = []
-            with open(file_path, "r") as f:
-                for line in f:
-                    text, x, y = line.strip().split()
-                    x, y = int(x), int(y)
-                    block_name = text.split(" (")[0]
-                    element = ctk.CTkLabel(self.master, text=text, bg_color="white", text_color="black", width=5, height=2)
-                    element.place(x=x, y=y)
-                    element.draggable = True
-                    element.bind("<ButtonPress-1>", self.start_drag)
-                    element.bind("<ButtonRelease-1>", self.stop_drag)
-                    element.bind("<B1-Motion>", self.drag)
-                    element.bind("<Button-3>", self.show_context_menu)
-                    self.elements.append(element)
-
-    def create_custom_element(self):
-        custom_element_window = ctk.CTkToplevel(self.master)
-        custom_element_window.title("Create Custom block")
-
-        text_editor = ctk.CTkTextbox(custom_element_window, width=400, height=100)
-
-        text_editor.pack(fill="both", expand=True)
-
-        create_button = ctk.CTkButton(custom_element_window, text="Create", command=lambda: self.add_custom_element(text_editor.get("1.0", "end-1c")))
-        create_button.pack()
-
-    def add_custom_element(self, element_text: str):
-        custom_element = ctk.CTkTextbox(self.master, width=200, height=50)
-        custom_element.insert("1.0", element_text)
-        custom_element.draggable = True
-        custom_element.bind("<ButtonPress-1>", self.start_drag)
-        custom_element.bind("<ButtonRelease-1>", self.stop_drag)
-        custom_element.bind("<B1-Motion>", self.drag)
-        custom_element.bind("<Button-3>", self.show_context_menu)
-        self.elements.append(custom_element)
-        canvas_id = self.canvas.create_window(10, 10, window=custom_element, tags="custom_element")
-        self.custom_elements[custom_element] = canvas_id
-        custom_element.x0 = 0
-        custom_element.y0 = 0
-
-    def show_context_menu(self, event: tk.Event):
-        context_menu = ctk.CTkMenu(self.master, tearoff=0)
-        context_menu.add_command(label="Delete", command=lambda: self.delete_element(event.widget))
-        context_menu.add_command(label="Edit Parameters", command=lambda: self.edit_parameters(event.widget))
-        context_menu.post(event.x_root, event.y_root)
-
-    def edit_parameters(self, element):
-        block_name = element.cget("text").split(" (")[0]
-        block_info = self.blocks[block_name]
-        if block_info["params"]:
-            params = [simpledialog.askstring("Parameter", f"Enter value for {param}") for param in block_info["params"]]
-            block_info["code"] = block_info["code"] % tuple(params)
+    def convert_to_c(self, block_type, block_code, params):
+        # Convert block code to C syntax
+        if block_type == 'move':
+            return f"move({params[0]});"
+        elif block_type == 'turn':
+            return f"turn({params[0]});"
+        elif block_type == 'go_to':
+            return f"go_to({params[0]}, {params[1]});"
+        elif block_type == 'point':
+            return f"point_direction({params[0]});"
+        elif block_type == 'say':
+            return f"say({params[0]});"
+        elif block_type == 'think':
+            return f"think({params[0]});"
+        elif block_type == 'change_size':
+            return f"change_size({params[0]});"
+        elif block_type == 'set_size':
+            return f"set_size({params[0]});"
+        elif block_type == 'play_sound':
+            return f"play_sound({params[0]});"
+        elif block_type == 'play_note':
+            return f"play_note({params[0]}, {params[1]});"
+        elif block_type == 'change_volume':
+            return f"change_volume({params[0]});"
+        elif block_type == 'set_volume':
+            return f"set_volume({params[0]});"
+        elif block_type == 'wait':
+            return f"wait({params[0]});"
+        elif block_type == 'repeat':
+            return f"for(int i = 0; i < {params[0]}; i++) {{\n    {params[1]}\n}}"
+        elif block_type == 'forever':
+            return f"while(1) {{\n    {params[0]}\n}}"
+        elif block_type == 'if':
+            return f"if({params[0]}) {{\n    {params[1]}\n}}"
+        elif block_type in ['add', 'subtract', 'multiply', 'divide']:
+            op = {'add': '+', 'subtract': '-', 'multiply': '*', 'divide': '/'}[block_type]
+            return f"({params[0]} {op} {params[1]})"
         else:
-            messagebox.showinfo("No Parameters", "This block has no parameters to edit.")
+            return block_code % tuple(params)
+    
+    def validate_blocks(self):
+        errors = []
+        
+        # Check for disconnected blocks
+        for block in self.elements:
+            if not block.connected_blocks and not any(block in other.connected_blocks for other in self.elements):
+                errors.append(f"Block '{block.block_type}' is not connected to any other block")
+        
+        # Check for required parameters
+        for block in self.elements:
+            if block.block_info.get('params'):
+                for param in block.block_info['params']:
+                    param_value = getattr(block, f"param_{param}").get()
+                    if not param_value:
+                        errors.append(f"Block '{block.block_type}' is missing required parameter '{param}'")
+        
+        return errors
+    
+    def run_project(self):
+        # Validate blocks before running
+        errors = self.validate_blocks()
+        if errors:
+            error_message = "Cannot run project due to the following errors:\n\n" + "\n".join(errors)
+            messagebox.showerror("Run Error", error_message)
+            return
+        
+        # Generate and execute code
+        code = self.export_to_code()
+        try:
+            # Create a new window to show the execution
+            execution_window = ctk.CTkToplevel(self.master)
+            execution_window.title("Project Execution")
+            execution_window.geometry("400x300")
+            
+            # Add a text area to show output
+            output_area = ctk.CTkTextbox(execution_window)
+            output_area.pack(fill="both", expand=True, padx=10, pady=10)
+            
+            # Execute the code and show output
+            output_area.insert("1.0", "Running project...\n\n")
+            output_area.insert("end", code)
+            
+        except Exception as e:
+            messagebox.showerror("Execution Error", str(e))
 
-    def change_appearance_mode_event(self, new_appearance_mode: str):
-        ctk.set_appearance_mode(new_appearance_mode)
+    def check_snapping(self, dragged_block):
+        if not dragged_block:
+            return
+            
+        dragged_coords = (dragged_block.winfo_x(), dragged_block.winfo_y())
+        dragged_bottom = dragged_coords[1] + dragged_block.winfo_height()
+        dragged_center_x = dragged_coords[0] + (dragged_block.winfo_width() / 2)
+        
+        # Grid size for snapping
+        GRID_SIZE = 20
+        SNAP_DISTANCE = 30  # Distance at which blocks will snap together
+        
+        # Find the closest block to snap to
+        closest_block = None
+        min_distance = float('inf')
+        
+        for block in self.elements:
+            if block != dragged_block:
+                block_coords = (block.winfo_x(), block.winfo_y())
+                block_top = block_coords[1]
+                block_center_x = block_coords[0] + (block.winfo_width() / 2)
+                
+                # Calculate distances
+                vertical_distance = abs(dragged_bottom - block_top)
+                horizontal_distance = abs(dragged_center_x - block_center_x)
+                
+                # Check if blocks are close enough to snap
+                if (vertical_distance < SNAP_DISTANCE and 
+                    horizontal_distance < SNAP_DISTANCE and 
+                    vertical_distance < min_distance):
+                    min_distance = vertical_distance
+                    closest_block = block
+        
+        if closest_block:
+            # Snap the blocks together
+            block_coords = (closest_block.winfo_x(), closest_block.winfo_y())
+            
+            # Align horizontally with the block above
+            dragged_block.place(
+                x=block_coords[0],  # Same X position as the block above
+                y=block_coords[1] - dragged_block.winfo_height()  # Place directly under
+            )
+            
+            # Connect the blocks if not already connected
+            if closest_block not in dragged_block.connected_blocks:
+                # Remove any existing connections for the dragged block
+                for block in self.elements:
+                    if dragged_block in block.connected_blocks:
+                        block.connected_blocks.remove(dragged_block)
+                dragged_block.connected_blocks.clear()
+                
+                # Add new connection
+                dragged_block.connected_blocks.append(closest_block)
+                closest_block.connected_blocks.append(dragged_block)
+                
+                # Visual feedback for connection
+                dragged_block.configure(border_color="#00ff00")
+                closest_block.configure(border_color="#00ff00")
+                
+                # Draw connection line
+                self.draw_connection_line(closest_block, dragged_block)
 
-    def change_scaling_event(self, new_scaling: str):
-        new_scaling_float = int(new_scaling.replace("%", "")) / 100
-        ctk.set_widget_scaling(new_scaling_float)
+    def draw_connection_line(self, block1, block2):
+        # Remove any existing connection lines
+        for tag in self.canvas.find_withtag("connection"):
+            self.canvas.delete(tag)
+        
+        # Get coordinates for both blocks
+        coords1 = (block1.winfo_x(), block1.winfo_y())
+        coords2 = (block2.winfo_x(), block2.winfo_y())
+        
+        # Calculate connection points
+        x1 = coords1[0] + block1.winfo_width() / 2
+        y1 = coords1[1] + block1.winfo_height()
+        x2 = coords2[0] + block2.winfo_width() / 2
+        y2 = coords2[1]
+        
+        # Draw the connection line
+        self.canvas.create_line(
+            x1, y1, x2, y2,
+            fill="#00ff00",
+            width=2,
+            dash=(4, 4),
+            tags="connection"
+        )
 
-    def paint(self):
-        paint_window = ctk.CTkToplevel(self.root)
-        paint_engine = p.PaintEngine(paint_window)  # Pass the master parameter
-        paint_engine.run()  # Call the run method to start the event loop
+    def open_settings(self):
+        settings_window = SettingsWindow(self.master)
+        settings_window.focus_set()
 
-    def ide(self):
-        ide_window = tide.textIde(self.root)  # Pass the self.root instance as the master parameter
-        ide_window.run()  # Call the run method to start the event loop # Call the run method to start the event loop
+    def load_settings(self):
+        try:
+            with open('settings.json', 'r') as f:
+                settings = json.load(f)
+                
+                # Apply theme
+                if 'theme' in settings:
+                    ctk.set_appearance_mode(settings['theme'])
+                
+                # Store other settings
+                self.SNAP_DISTANCE = int(settings.get('snap_distance', 30))
+                
+        except FileNotFoundError:
+            # Use default settings if file doesn't exist
+            pass
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load settings: {str(e)}")
 
 if __name__ == "__main__":
     app = ctk.CTk()

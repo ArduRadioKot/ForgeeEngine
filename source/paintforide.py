@@ -1,6 +1,8 @@
 import customtkinter as ctk
 from tkinter import filedialog
 from PIL import Image, ImageTk
+ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
+ctk.set_default_color_theme("green") 
 class PaintEngine:
     def __init__(self, master):
         self.root = ctk.CTk()
