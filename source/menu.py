@@ -150,13 +150,13 @@ class MainMenu:
 
     def open_project(self):
         file_path = filedialog.askopenfilename(
-            title="Select Project",
-            filetypes=[("Game Engine Projects", "*.fge")]
+            filetypes=[("Forgee Engine Project", "*.fge")]
         )
         if file_path:
-            self.add_recent_project(file_path)
-            game_engine_window = ctk.CTkToplevel(self.root)
-            game_engine = ge.GameEngine(game_engine_window, file_path)
+            game_engine_window = ctk.CTk()
+            game_engine = ge.GameEngine(game_engine_window)
+            game_engine.load_project(file_path)
+            game_engine_window.mainloop()
 
     def create_project(self):
         create_window = ctk.CTkToplevel(self.root)

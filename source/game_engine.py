@@ -5,6 +5,7 @@ import tkinter as tk
 import paintforide as p
 from TextIde import TextIde
 import json
+import os
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue") 
@@ -333,6 +334,9 @@ class GameEngine:
                 'subtract': {'code': '%s - %s', 'params': ['a', 'b'], 'color': '#40BF4A', 'border_color': '#2E8A35'},
                 'multiply': {'code': '%s * %s', 'params': ['a', 'b'], 'color': '#40BF4A', 'border_color': '#2E8A35'},
                 'divide': {'code': '%s / %s', 'params': ['a', 'b'], 'color': '#40BF4A', 'border_color': '#2E8A35'}
+            },
+            'Graphics': {
+                'bitmap': {'code': 'display_bitmap(%s)', 'params': ['bitmap_name'], 'color': '#FF5252', 'border_color': '#CC4040'}
             }
         }
         
@@ -387,6 +391,13 @@ class GameEngine:
             command=self.open_text_editor
         )
         self.editor_button.pack(fill="x", padx=5, pady=5)
+        
+        self.bitmap_editor_button = ctk.CTkButton(
+            self.toolbar,
+            text="Open Bitmap Editor",
+            command=self.open_bitmap_editor
+        )
+        self.bitmap_editor_button.pack(fill="x", padx=5, pady=5)
         
         self.export_button = ctk.CTkButton(
             self.toolbar,
@@ -511,11 +522,6 @@ class GameEngine:
                 self.draw_connection_line(from_block, to_block)
             
             messagebox.showinfo("Success", "Project loaded successfully!")
-
-    def create_buttons(self):
-        for block_name, block_info in self.blocks.items():
-            button = ctk.CTkButton(self.button_frame, text=block_name, command=lambda block_name=block_name: self.create_block(block_name))
-            button.pack(fill="x", pady =10 )
 
     def create_block(self, block_name, block_info):
         block = Block(self.canvas, block_name, block_info, width=150)
@@ -878,6 +884,38 @@ class GameEngine:
     def open_text_editor(self):
         editor = tide.TextIde(game_engine=self)
         editor.run()
+
+    def open_bitmap_editor(self):
+        bitmap_editor = p.PaintEngine(self.master)
+        bitmap_editor.run()
+        
+        if os.path.exists("bitmap.h"):
+            with open("bitmap.h", "r") as f:
+                bitmap_content = f.read()
+            
+            bitmap_name = simpledialog.askstring("Bitmap Name", "Enter a name for this bitmap:")
+            if bitmap_name:
+                if not os.path.exists("bitmaps"):
+                    os.makedirs("bitmaps")
+                
+                with open(f"bitmaps/{bitmap_name}.h", "w") as f:
+                    f.write(bitmap_content)
+                
+                self.block_categories['Graphics']['bitmap'] = {
+                    'code': f'display_bitmap("{bitmap_name}")',
+                    'params': ['bitmap_name'],
+                    'color': '#FF5252',
+                    'border_color': '#CC4040'
+                }
+                
+                self.create_block_categories()
+                messagebox.showinfo("Success", f"Bitmap '{bitmap_name}' has been added to the Graphics category!")
+                
+                # Clean up temporary bitmap file
+                try:
+                    os.remove("bitmap.h")
+                except:
+                    pass
 
     def delete_selected_block(self, event=None):
         if self.selected_block:
