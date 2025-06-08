@@ -882,7 +882,7 @@ class GameEngine:
             messagebox.showerror("Error", f"Failed to load settings: {str(e)}")
 
     def open_text_editor(self):
-        editor = tide.TextIde(game_engine=self)
+        editor = TextIde(game_engine=self)
         editor.run()
 
     def open_bitmap_editor(self):

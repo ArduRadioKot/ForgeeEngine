@@ -12,7 +12,7 @@ class MainMenu:
         self.root = root
         self.root.title("ForgeeEngine")
         self.root.geometry("1024x768")
-        
+
         self.recent_projects_list = self.load_recent_projects()
         
         self.main_container = ctk.CTkFrame(self.root, fg_color="transparent")
@@ -29,7 +29,7 @@ class MainMenu:
         
         self.title_frame = ctk.CTkFrame(self.menu_frame, fg_color="transparent")
         self.title_frame.pack(fill="x", padx=20, pady=(30, 20))
-        
+
         self.label = ctk.CTkLabel(
             self.title_frame,
             text="ForgeeEngine",
@@ -45,7 +45,7 @@ class MainMenu:
             text_color=("#666666", "#aaaaaa")
         )
         self.subtitle.pack(pady=(0, 20))
-        
+
         self.buttons_frame = ctk.CTkFrame(self.menu_frame, fg_color="transparent")
         self.buttons_frame.pack(fill="x", padx=40, pady=20)
         
@@ -60,7 +60,7 @@ class MainMenu:
             command=self.create_project
         )
         self.create_project_button.pack(fill="x", pady=(0, 10))
-        
+
         self.open_project_button = ctk.CTkButton(
             self.buttons_frame,
             text="Open Project",
@@ -84,7 +84,7 @@ class MainMenu:
             command=self.settings
         )
         self.settings_button.pack(fill="x", pady=(0, 10))
-        
+
         self.quit_button = ctk.CTkButton(
             self.buttons_frame,
             text="Quit",
@@ -99,7 +99,7 @@ class MainMenu:
         
         self.recent_frame = ctk.CTkFrame(self.menu_frame, fg_color="transparent")
         self.recent_frame.pack(fill="x", padx=40, pady=20)
-        
+
         self.recent_projects_label = ctk.CTkLabel(
             self.recent_frame,
             text="Recent Projects",
@@ -107,7 +107,7 @@ class MainMenu:
             text_color=("#2b2b2b", "#ffffff")
         )
         self.recent_projects_label.pack(anchor="w", pady=(0, 10))
-        
+
         self.recent_projects_combobox = ctk.CTkComboBox(
             self.recent_frame,
             values=self.recent_projects_list,
@@ -162,7 +162,7 @@ class MainMenu:
         create_window = ctk.CTkToplevel(self.root)
         create_window.title("Create New Project")
         create_window.geometry("400x300")
-        
+
         create_frame = ctk.CTkFrame(
             create_window,
             corner_radius=15,
@@ -171,7 +171,7 @@ class MainMenu:
             border_color=("#e0e0e0", "#404040")
         )
         create_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
+
         project_name_label = ctk.CTkLabel(
             create_frame,
             text="Project Name",
@@ -179,7 +179,7 @@ class MainMenu:
             text_color=("#2b2b2b", "#ffffff")
         )
         project_name_label.pack(pady=(30, 10))
-        
+
         project_name_entry = ctk.CTkEntry(
             create_frame,
             width=250,
@@ -189,7 +189,7 @@ class MainMenu:
             placeholder_text="Enter project name..."
         )
         project_name_entry.pack(pady=10)
-        
+
         create_button = ctk.CTkButton(
             create_frame,
             text="Create Project",
@@ -228,7 +228,7 @@ class MainMenu:
         settings_window = ctk.CTkToplevel(self.root)
         settings_window.title("Settings")
         settings_window.geometry("500x400")
-        
+
         settings_frame = ctk.CTkFrame(
             settings_window,
             corner_radius=15,
@@ -237,7 +237,7 @@ class MainMenu:
             border_color=("#e0e0e0", "#404040")
         )
         settings_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
+
         settings_label = ctk.CTkLabel(
             settings_frame,
             text="Settings",
@@ -267,7 +267,7 @@ class MainMenu:
         )
         theme_combo.pack(side="left", fill="x", expand=True)
         theme_combo.set(ctk.get_appearance_mode())
-        
+
         save_button = ctk.CTkButton(
             settings_frame,
             text="Save Settings",
@@ -296,5 +296,5 @@ class MainMenu:
 
 if __name__ == "__main__":
     root = ctk.CTk()
-    main_app = MainMenu(root)
+    main_app = MainMenu(root) 
     root.mainloop()

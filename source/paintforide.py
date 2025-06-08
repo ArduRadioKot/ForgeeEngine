@@ -11,10 +11,10 @@ class PaintEngine:
         self.master = master
         self.root.title("Bitmap Editor")
         self.root.geometry("800x640")
-        
+
         self.main_frame = ctk.CTkFrame(self.root, fg_color="transparent")
         self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
+
         self.canvas_frame = ctk.CTkFrame(self.main_frame)
         self.canvas_frame.pack(fill="both", expand=True, pady=(0, 20))
         
@@ -30,10 +30,10 @@ class PaintEngine:
         self.pixel_size = 4
         self.pixels = {}
         self.initialize_canvas()
-        
+
         self.brush_size = 1
         self.eraser_size = 1
-        
+
         self.controls_frame = ctk.CTkFrame(self.main_frame)
         self.controls_frame.pack(fill="x", pady=(0, 20))
         
@@ -75,7 +75,7 @@ class PaintEngine:
             font=("Arial", 12, "bold")
         )
         self.eraser_label.pack(side="left", padx=10)
-        
+
         self.eraser_slider = ctk.CTkSlider(
             self.eraser_frame,
             from_=1,
@@ -133,7 +133,7 @@ class PaintEngine:
             command=self.quit
         )
         self.quit_button.pack(side="right", padx=5)
-        
+
         self.canvas.bind("<B1-Motion>", self.draw)
         self.canvas.bind("<B3-Motion>", self.erase)
         self.image = None
@@ -155,7 +155,7 @@ class PaintEngine:
     
     def quit(self):
         self.root.destroy()
-    
+
     def paint_pixel(self, x, y, color, brush_size):
         for i in range(-brush_size, brush_size+1):
             for j in range(-brush_size, brush_size+1):
@@ -165,17 +165,17 @@ class PaintEngine:
                     pixel_id = self.pixels.get((new_y, new_x))
                     if pixel_id:
                         self.canvas.itemconfig(pixel_id, fill=color)
-    
+
     def draw(self, event):
         x = event.x // self.pixel_size
         y = event.y // self.pixel_size
         self.paint_pixel(x, y, "black", self.brush_size)
-    
+
     def erase(self, event):
         x = event.x // self.pixel_size
         y = event.y // self.pixel_size
         self.paint_pixel(x, y, "white", self.eraser_size)
-    
+
     def save_bitmap_h(self):
         bitmap = []
         for i in range(64):
@@ -184,7 +184,7 @@ class PaintEngine:
                 pixel_id = self.pixels.get((i, j))
                 if pixel_id:
                     pixel_color = self.canvas.itemcget(pixel_id, "fill")
-                    if pixel_color == "black":
+                if pixel_color == "black":
                         byte |= 1 << (7 - (j % 8))
                 if j % 8 == 7:
                     bitmap.append(f"0x{byte:02x}")
@@ -199,18 +199,18 @@ class PaintEngine:
         if file_path:
             with open(file_path, "w") as f:
                 f.write("const uint8_t bitmap[] = {\n")
-                for i in range(0, len(bitmap), 16):
-                    f.write(", ".join(bitmap[i:i+16]) + ",\n")
-                f.write("};\n")
-    
+            for i in range(0, len(bitmap), 16):
+                f.write(", ".join(bitmap[i:i+16]) + ",\n")
+            f.write("};\n")
+
     def update_brush_size(self, value):
         self.brush_size = int(value)
         self.brush_value.configure(text=str(self.brush_size))
-    
+
     def update_eraser_size(self, value):
         self.eraser_size = int(value)
         self.eraser_value.configure(text=str(self.eraser_size))
-    
+
     def open_image(self):
         file_path = filedialog.askopenfilename(
             filetypes=[("Image files", "*.png *.jpg *.bmp")]
@@ -227,7 +227,7 @@ class PaintEngine:
                         r, g, b = pixels[j, i][:3]
                         color = "black" if (r + g + b) < 384 else "white"
                         self.canvas.itemconfig(pixel_id, fill=color)
-    
+
     def run(self):
         self.root.mainloop()
 

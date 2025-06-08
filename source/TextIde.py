@@ -33,7 +33,7 @@ class TextIde(ctk.CTk):
         self.configure_syntax_highlighting()
         
         # Bind events
-        self.text_area.bind("<KeyRelease>", self.highlight_syntax_realtime)
+        self.text_area.bind("<KeyRelease>", self.highlight_syntax_realtime)  
         
         # Update line numbers periodically
         self.update_line_numbers()
@@ -166,10 +166,10 @@ class TextIde(ctk.CTk):
         # Remove all existing tags
         for tag in ['keyword', 'builtin', 'string', 'comment', 'class', 'def_func', 'number', 'operator']:
             self.text_area.tag_remove(tag, '1.0', 'end')
-        
+
         text = self.text_area.get('1.0', 'end-1c')
         lines = text.split('\n')
-        
+
         for i, line in enumerate(lines, 1):
             # Highlight comments
             if '#' in line:
