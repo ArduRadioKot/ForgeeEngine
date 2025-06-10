@@ -337,7 +337,8 @@ class GameEngine:
             },
             'Graphics': {
                 'bitmap': {'code': 'display_bitmap(%s)', 'params': ['bitmap_name'], 'color': '#FF5252', 'border_color': '#CC4040'}
-            }
+            },
+            'Custom': {}
         }
         
         self.create_layout()
@@ -450,7 +451,8 @@ class GameEngine:
         if file_path:
             project_data = {
                 'blocks': [],
-                'connections': []
+                'connections': [],
+                'custom_blocks': self.block_categories['Custom']
             }
             
             for i, block in enumerate(self.elements):
@@ -489,6 +491,10 @@ class GameEngine:
         if file_path:
             with open(file_path, 'r') as f:
                 project_data = json.load(f)
+            
+            if 'custom_blocks' in project_data:
+                self.block_categories['Custom'] = project_data['custom_blocks']
+                self.create_block_categories()
             
             self.clear_workspace()
             
@@ -544,11 +550,24 @@ class GameEngine:
         return block
 
     def create_block_categories(self):
+        # Remove all existing tabs
+        for tab in self.category_tabs._tab_dict.copy():
+            self.category_tabs.delete(tab)
+        
         for category in self.block_categories.keys():
             tab = self.category_tabs.add(category)
             
             block_frame = ctk.CTkFrame(tab)
             block_frame.pack(fill="both", expand=True, padx=5, pady=5)
+            
+            if category == 'Custom':
+                create_custom_button = ctk.CTkButton(
+                    block_frame,
+                    text="Create Custom Block",
+                    fg_color="#FF5252",
+                    command=self.create_custom_block
+                )
+                create_custom_button.pack(fill="x", padx=5, pady=2)
             
             for block_name, block_info in self.block_categories[category].items():
                 button = ctk.CTkButton(
@@ -558,7 +577,82 @@ class GameEngine:
                     command=lambda bn=block_name, bi=block_info: self.create_block(bn, bi)
                 )
                 button.pack(fill="x", padx=5, pady=2)
+                
+                if category == 'Custom':
+                    edit_button = ctk.CTkButton(
+                        block_frame,
+                        text=f"Edit {block_name}",
+                        fg_color="#FFAB19",
+                        command=lambda bn=block_name: self.edit_custom_block(bn)
+                    )
+                    edit_button.pack(fill="x", padx=5, pady=2)
     
+    def create_custom_block(self):
+        name = simpledialog.askstring("Custom Block", "Enter block name:")
+        if not name:
+            return
+            
+        params_str = simpledialog.askstring("Custom Block", "Enter parameter names (comma-separated):")
+        params = [p.strip() for p in params_str.split(',')] if params_str else []
+        
+        editor = TextIde(game_engine=self)
+        editor.text_area.insert("1.0", "# Write your custom code here\n# Use %s for parameters\n# Example: printf('Value: %s')" % (', '.join(params), ', '.join(params)))
+        
+        # Add save button to editor
+        save_button = ctk.CTkButton(
+            editor.button_frame,
+            text="Save as Custom Block",
+            command=lambda: self.save_custom_block(name, params, editor)
+        )
+        save_button.pack(side="left", padx=5)
+        
+        editor.run()
+
+    def save_custom_block(self, name, params, editor):
+        code = editor.text_area.get("1.0", "end-1c").strip()
+        if not code:
+            messagebox.showerror("Error", "Custom block code cannot be empty!")
+            return
+            
+        self.block_categories['Custom'][name] = {
+            'code': code,
+            'params': params,
+            'color': '#FF5252',
+            'border_color': '#CC4040'
+        }
+        
+        self.create_block_categories()
+        messagebox.showinfo("Success", f"Custom block '{name}' has been created!")
+        editor.destroy()
+
+    def edit_custom_block(self, block_name):
+        if block_name in self.block_categories['Custom']:
+            block_info = self.block_categories['Custom'][block_name]
+            
+            editor = TextIde(game_engine=self)
+            editor.text_area.insert("1.0", block_info['code'])
+            
+            # Add save button to editor
+            save_button = ctk.CTkButton(
+                editor.button_frame,
+                text="Save Changes",
+                command=lambda: self.update_custom_block(block_name, editor)
+            )
+            save_button.pack(side="left", padx=5)
+            
+            editor.run()
+
+    def update_custom_block(self, block_name, editor):
+        code = editor.text_area.get("1.0", "end-1c").strip()
+        if not code:
+            messagebox.showerror("Error", "Custom block code cannot be empty!")
+            return
+            
+        self.block_categories['Custom'][block_name]['code'] = code
+        self.create_block_categories()
+        messagebox.showinfo("Success", f"Custom block '{block_name}' has been updated!")
+        editor.destroy()
+
     def export_to_c(self):
         errors = self.validate_blocks()
         if errors:
@@ -622,10 +716,20 @@ class GameEngine:
             "void change_volume(int volume);",
             "void set_volume(int volume);",
             "void wait(int seconds);",
+        ]
+        
+        # Add custom function declarations
+        for block_name, block_info in self.block_categories['Custom'].items():
+            func_name = f"custom_{block_name.lower().replace(' ', '_')}"
+            param_types = ["int" if p.isdigit() else "const char*" for p in block_info['params']]
+            param_decl = ", ".join(f"{t} {p}" for t, p in zip(param_types, block_info['params']))
+            c_program.append(f"void {func_name}({param_decl});")
+        
+        c_program.extend([
             "",
             "int main() {",
             "    printf(\"Starting program...\\n\");",
-        ]
+        ])
         
         for line in code:
             c_program.append("    " + line)
@@ -705,6 +809,18 @@ class GameEngine:
             "}"
         ])
         
+        # Add custom function implementations
+        for block_name, block_info in self.block_categories['Custom'].items():
+            func_name = f"custom_{block_name.lower().replace(' ', '_')}"
+            param_types = ["int" if p.isdigit() else "const char*" for p in block_info['params']]
+            param_decl = ", ".join(f"{t} {p}" for t, p in zip(param_types, block_info['params']))
+            
+            func_code = f"void {func_name}({param_decl}) {{\n"
+            func_code += "    " + block_info['code'].replace("\n", "\n    ") + "\n"
+            func_code += "}\n"
+            
+            c_program.append(func_code)
+        
         file_path = filedialog.asksaveasfilename(
             defaultextension=".c",
             filetypes=[('C Source File', '*.c')]
@@ -713,8 +829,26 @@ class GameEngine:
             with open(file_path, "w") as f:
                 f.write("\n".join(c_program))
             messagebox.showinfo("Success", "C code exported successfully!")
-    
+
     def convert_to_c(self, block_type, block_code, params):
+        if block_type in self.block_categories['Custom']:
+            try:
+                # For custom blocks, we'll create a function with the block's code
+                func_name = f"custom_{block_type.lower().replace(' ', '_')}"
+                param_types = ["int" if p.isdigit() else "const char*" for p in params]
+                param_decl = ", ".join(f"{t} {p}" for t, p in zip(param_types, params))
+                
+                # Create the function implementation
+                func_code = f"void {func_name}({param_decl}) {{\n"
+                func_code += "    " + block_code.replace("\n", "\n    ") + "\n"
+                func_code += "}"
+                
+                # Return the function call
+                return f"{func_name}({', '.join(params)});"
+            except Exception as e:
+                messagebox.showerror("Error", f"Error in custom block '{block_type}': {str(e)}")
+                return f"// Error in custom block: {str(e)}"
+        
         if block_type == 'move':
             return f"move({params[0]});"
         elif block_type == 'turn':
@@ -776,7 +910,7 @@ class GameEngine:
             messagebox.showerror("Run Error", error_message)
             return
         
-        code = self.export_to_code()
+        code = self.export_to_c()
         try:
             execution_window = ctk.CTkToplevel(self.master)
             execution_window.title("Project Execution")

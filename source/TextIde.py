@@ -1,6 +1,6 @@
 import customtkinter as ctk
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 import json
 
 class TextIde(ctk.CTk):
@@ -39,9 +39,13 @@ class TextIde(ctk.CTk):
         self.update_line_numbers()
 
     def add_toolbar_buttons(self):
+        # Create button frame
+        self.button_frame = ctk.CTkFrame(self.toolbar)
+        self.button_frame.pack(fill="x", padx=5, pady=5)
+        
         # Save button
         self.save_button = ctk.CTkButton(
-            self.toolbar,
+            self.button_frame,
             text="Save",
             command=self.save_file,
             width=120
@@ -50,7 +54,7 @@ class TextIde(ctk.CTk):
         
         # Load button
         self.load_button = ctk.CTkButton(
-            self.toolbar,
+            self.button_frame,
             text="Load",
             command=self.load_file,
             width=120
@@ -60,12 +64,21 @@ class TextIde(ctk.CTk):
         # Update from blocks button
         if self.game_engine:
             self.update_button = ctk.CTkButton(
-                self.toolbar,
+                self.button_frame,
                 text="Update from Blocks",
                 command=self.update_from_blocks,
                 width=120
             )
             self.update_button.pack(padx=5, pady=5)
+            
+            # Save as Custom Block button
+            self.save_custom_button = ctk.CTkButton(
+                self.button_frame,
+                text="Save as Custom Block",
+                command=self.save_as_custom_block,
+                width=120
+            )
+            self.save_custom_button.pack(padx=5, pady=5)
         
         # Theme selector
         self.theme_label = ctk.CTkLabel(self.toolbar, text="Theme:")
@@ -242,7 +255,7 @@ class TextIde(ctk.CTk):
     def update_from_blocks(self):
         if self.game_engine:
             # Get the generated code from blocks
-            code = self.game_engine.export_to_code()
+            code = self.game_engine.export_to_c()
             # Update text area
             self.text_area.delete('1.0', 'end')
             self.text_area.insert('1.0', code)
@@ -261,6 +274,42 @@ class TextIde(ctk.CTk):
         font = ("Consolas", int(size))
         self.text_area.configure(font=font)
         self.line_number_area.configure(font=font)
+
+    def save_as_custom_block(self):
+        if not self.game_engine:
+            messagebox.showerror("Error", "Game engine not available!")
+            return
+            
+        name = simpledialog.askstring("Custom Block", "Enter block name:")
+        if not name:
+            return
+            
+        params_str = simpledialog.askstring("Custom Block", "Enter parameter names (comma-separated):")
+        params = [p.strip() for p in params_str.split(',')] if params_str else []
+        
+        code = self.text_area.get("1.0", "end-1c").strip()
+        if not code:
+            messagebox.showerror("Error", "Custom block code cannot be empty!")
+            return
+            
+        self.game_engine.block_categories['Custom'][name] = {
+            'code': code,
+            'params': params,
+            'color': '#FF5252',
+            'border_color': '#CC4040'
+        }
+        
+        self.game_engine.create_block_categories()
+        
+        # Create the block on canvas
+        block = self.game_engine.create_block(name, self.game_engine.block_categories['Custom'][name])
+        
+        # Position the block in a visible area
+        x = self.game_engine.canvas.canvasx(0) + 50
+        y = self.game_engine.canvas.canvasy(0) + 50
+        block.place(x=x, y=y)
+        
+        messagebox.showinfo("Success", f"Custom block '{name}' has been created!")
 
     def run(self):
         self.mainloop()
